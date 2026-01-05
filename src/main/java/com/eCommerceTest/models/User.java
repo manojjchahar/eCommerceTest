@@ -1,4 +1,4 @@
-package com.ecommercefull.models;
+package com.eCommerceTest.models;
 
 public class User {
     private String name;

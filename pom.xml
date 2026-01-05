@@ -20,8 +20,16 @@
         <jackson.version>2.15.2</jackson.version>
         <toml4j.version>0.7.2</toml4j.version>
         <webdrivermanager.version>5.6.2</webdrivermanager.version>
+        <!-- Assertions & async utilities -->
+        <assertj.version>3.26.3</assertj.version>
+        <awaitility.version>4.2.0</awaitility.version>
         <!-- Surefire rerun for flaky tests (can override with -Dsurefire.rerunFailingTestsCount=N) -->
         <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+        <allure.version>2.24.0</allure.version>
+        <!-- Optional default so local runs without -Dcucumber.filter.tags still work -->
+        <cucumber.filter.tags></cucumber.filter.tags>
+        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+        <aspectj.version>1.9.19</aspectj.version>
     </properties>
 
     <dependencies>
@@ -109,7 +117,6 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>${assertj.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <!-- Awaitility - fluent async/waiting -->
@@ -117,14 +124,20 @@
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
             <version>${awaitility.version}</version>
-            <scope>test</scope>
         </dependency>
 
-        <!-- Logback SLF4J binding to provide logging implementation -->
+        <!-- Logback (includes SLF4J 2.x API transitively) -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.11</version>
+            <version>1.2.13</version>
+        </dependency>
+
+        <!-- Ensure SLF4J API 1.x is present to match logback-classic 1.2.x -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.36</version>
         </dependency>
 
         <!-- Jansi enables ANSI colors on Windows consoles -->
@@ -134,6 +147,34 @@
             <version>2.3.4</version>
         </dependency>
 
+        <!-- JSON Schema Validator (everit) for advanced schema validation -->
+        <dependency>
+            <groupId>com.github.erosb</groupId>
+            <artifactId>everit-json-schema</artifactId>
+            <version>1.14.4</version>
+        </dependency>
+
+        <!-- org.json for JSON processing -->
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20231013</version>
+        </dependency>
+
+        <!-- Allure Cucumber 7 adapter -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-cucumber7-jvm</artifactId>
+            <version>${allure.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Allure Rest-Assured filter -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-rest-assured</artifactId>
+            <version>${allure.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -159,11 +200,36 @@
                     <includes>
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
+                        <!-- Include Cucumber/TestNG runner classes so Surefire generates XML -->
+                        <include>**/*Runner.java</include>
                     </includes>
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/resources/testNG.xml</suiteXmlFile>
                     </suiteXmlFiles>
+                    <systemPropertyVariables>
+                        <!-- Ensure Allure adapters write under target/allure-results (matches CI expectations) -->
+                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+                        <!-- Allow tag filtering via -Dcucumber.filter.tags without rewriting runners -->
+                        <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
+                    </systemPropertyVariables>
+                    <!-- AspectJ weaver required for Allure report generation -->
+                    <argLine>
+                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
+                    </argLine>
+                    <properties>
+                        <property>
+                            <name>usedefaultlisteners</name>
+                            <value>true</value>
+                        </property>
+                    </properties>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjweaver</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -197,6 +263,25 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Allure Maven plugin to generate reports in CI -->
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
+                <version>2.12.0</version>
+                <executions>
+                    <execution>
+                        <id>allure-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Use same directory that adapters write results to (can be overridden via -Dallure.results.directory) -->
+                            <resultsDirectory>${allure.results.directory}</resultsDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

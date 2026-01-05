@@ -1,0 +1,7 @@
+[node]
+detect-drivers = false
+max-sessions = 2
+
+[router]
+username = "admin"
+password = "password"

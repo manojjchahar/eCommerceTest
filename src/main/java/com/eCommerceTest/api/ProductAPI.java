@@ -1,29 +1,25 @@
-package com.ecommercefull.api;
+package com.eCommerceTest.api;
 
-import com.ecommercefull.base.BaseAPI;
+import com.eCommerceTest.base.BaseAPI;
 import io.restassured.response.Response;
-
-import static io.restassured.RestAssured.given;
 
 public class ProductAPI extends BaseAPI {
 
     public Response productsList() {
-        return given()
-                .get(APIEndpoints.PRODUCTS_LIST)
-                .then().extract().response();
+        return spec().get(APIEndpoints.PRODUCTS_LIST)
+                .then().log().all().extract().response();
     }
 
     public Response searchProduct(String search) {
-        return given()
+        return spec()
                 .contentType("application/x-www-form-urlencoded")
                 .formParam("search_product", search)
                 .post(APIEndpoints.SEARCH_PRODUCT)
-                .then().extract().response();
+                .then().log().all().extract().response();
     }
 
     public Response brandsList() {
-        return given()
-                .get(APIEndpoints.BRANDS_LIST)
-                .then().extract().response();
+        return spec().get(APIEndpoints.BRANDS_LIST)
+                .then().log().all().extract().response();
     }
 }

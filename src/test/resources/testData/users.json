@@ -1,12 +1,17 @@
 [
   {
+    "name": "mxk",
+    "email": "sharper.stomata_9r@icloud.com",
+    "password": "kehnyn-tEnven-howsu5"
+  },
+  {
     "name": "John Doe",
     "email": "john.doe+test@example.com",
-    "password": "Password@123"
+    "password": "SecurePass@123"
   },
   {
     "name": "Jane Smith",
     "email": "jane.smith+test@example.com",
-    "password": "Password@123"
+    "password": "Premium@Pass456"
   }
 ]

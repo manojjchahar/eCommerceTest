@@ -1,6 +1,6 @@
-package com.ecommercefull.api;
+package com.eCommerceTest.api;
 
-import com.ecommercefull.base.BaseAPI;
+import com.eCommerceTest.base.BaseAPI;
 import io.restassured.response.Response;
 
 import static io.restassured.RestAssured.given;

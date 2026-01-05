@@ -1,4 +1,4 @@
-package com.ecommercefull.utils;
+package com.eCommerceTest.utils;
 
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;

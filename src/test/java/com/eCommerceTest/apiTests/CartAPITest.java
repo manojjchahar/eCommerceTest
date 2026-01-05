@@ -1,6 +1,6 @@
-package com.ecommercefull.apiTests;
+package com.eCommerceTest.apiTests;
 
-import com.ecommercefull.api.CartAPI;
+import com.eCommerceTest.api.CartAPI;
 import io.restassured.response.Response;
 import org.testng.Assert;
 import org.testng.annotations.Test;

@@ -1,7 +1,6 @@
-package com.ecommercefull.apiTests;
+package com.eCommerceTest.apiTests;
 
-import com.ecommercefull.api.ProductAPI;
-import io.restassured.module.jsv.JsonSchemaValidator;
+import com.eCommerceTest.api.ProductAPI;
 import io.restassured.response.Response;
 import org.testng.Assert;
 import org.testng.annotations.Test;

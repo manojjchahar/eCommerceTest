@@ -1,0 +1,17 @@
+[
+  {
+    "cardholderName": "John Doe",
+    "cardNumber": "4111111111111111",
+    "cvc": "123",
+    "expiryMonth": "12",
+    "expiryYear": "2025"
+  },
+  {
+    "cardholderName": "Jane Smith",
+    "cardNumber": "5500000000000004",
+    "cvc": "456",
+    "expiryMonth": "06",
+    "expiryYear": "2026"
+  }
+]
+

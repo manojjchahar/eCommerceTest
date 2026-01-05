@@ -14,7 +14,7 @@
 
 ## 🚀 Project Overview
 
-**ECommerceFullTestFramework** is a modern automation suite targeting the [AutomationExercise](https://www.automationexercise.com) website. It provides robust UI and API automation for functional, regression, data-driven, and integration testing, using open-source tools and enterprise CI/CD standards.
+**ECommerceFullTestFramework** is a modern automation suite targeting the [AutomationExercise](https://www.automationexercise.com) website. It provides robust UI and API automation for functional, regression, data-driven, and resiliency testing, using open-source tools and enterprise CI/CD standards.
 
 The goal is to deliver portfolio-level, industry-standard automation that is easy to maintain, scale, and extend for real-world ecommerce platforms.
 
@@ -22,192 +22,214 @@ The goal is to deliver portfolio-level, industry-standard automation that is eas
 
 ## ✨ Key Features
 
-- UI automation with **Selenium WebDriver**
-- API automation with **Rest Assured**
-- BDD specification using **Cucumber**
-- Data-driven testing with flexible JSON schema and test data files
-- Comprehensive reporting: **ExtentReports**, **Cucumber**, and **TestNG**
-- Azure DevOps pipeline-ready (**yaml**) with caching and retry controls
-- Modular Page Object Model and API client structure
-- Clean code adhering to SOLID and DRY principles
-- Schema validation and negative-path testing
-- Continuous integration support (build, test, artifact publication)
-- Hooks, setup/teardown utilities, screenshot on failure
-- Flaky-test resilience: TestNG RetryAnalyzer + Surefire reruns (configurable)
-- Cloud/Grid ready: run locally, headless, or on Selenium Grid via `-DgridUrl`
+- UI automation with **Selenium WebDriver** & Page Objects
+- API automation with **Rest Assured** (client abstraction + endpoint constants)
+- BDD using **Cucumber** (Gherkin feature specs, tags strategy)
+- Data-driven testing via centralized JSON test data + dynamic record selection
+- Built-in **retry strategies** (fixed delay + exponential backoff) for transient API failures & rate-limit simulation
+- Resiliency & security test pack (status variance, rate limit 429, token absence/invalid scenarios)
+- JSON schema validation (multiple schemas: product, brand, user, cart, order)
+- Comprehensive reporting: **ExtentReports**, **Allure**, **Cucumber**, **TestNG**
+- Screenshot & response embedding on failure (UI + API)
+- Flaky-test mitigation: **TestNG RetryAnalyzer** + optional Surefire reruns
+- Config-driven execution (TOML config + runtime system properties)
+- Parallel-ready via TestNG DataProvider & dedicated parallel runner
+- Clean code aligned with SOLID/DRY & layered architecture (pages, api, models, utils)
 
 ***
 
 ## 🛠 Technology Stack
 
 | Technology | Version | Role |
-| :--: |:-------:| :-- |
-| Java |   21    | Programming language |
-| Maven |  3.8+   | Build, dependencies |
-| Selenium | 4.16.1  | UI browser automation |
-| Rest Assured |  5.3.2  | API automation |
-| TestNG |  7.8.0  | Test execution |
-| Cucumber | 7.15.0  | BDD scenarios |
-| ExtentReports |  5.0.9  | HTML reporting |
-| WebDriverManager |  5.6.2  | Browser drivers |
-| Jackson |  2.15+  | JSON data handling |
-| TOML4J |  0.7.2  | Config management |
-
+| :-- | :--: | :-- |
+| Java | 21 | Language |
+| Maven | 3.8+ | Build & dependency management |
+| Selenium | 4.16.1 | UI automation |
+| Rest Assured | 5.3.2 | API test client |
+| TestNG | 7.8.0 | Test execution & retries |
+| Cucumber | 7.15.0 | BDD layer |
+| ExtentReports | 5.0.9 | HTML rich report |
+| Allure | 2.24.0 | Advanced reporting & traceability |
+| WebDriverManager | 5.6.2 | Driver binaries |
+| Jackson | 2.15.x | JSON serialization/deserialization |
+| TOML4J | 0.7.2 | Config parsing |
+| AssertJ | 3.26.3 | Fluent assertions (API/model) |
+| Awaitility | 4.2.0 | Asynchronous waits (if needed) |
+| Logback + SLF4J | 1.2.13 / 1.7.36 | Logging infrastructure |
 
 ***
 
 ## ✅ Prerequisites
 
-- Java Development Kit (JDK) 21 installed and active on PATH
+- JDK 21 installed & JAVA_HOME set
 - Maven 3.8+ installed
-- Set JAVA_HOME to your JDK 21 path
-- Browsers: Chrome or Edge installed for UI tests
+- Chrome (primary) or Edge browser installed
 
 Verify setup:
 ```bash
-java -version   # should report 21
-mvn -v          # Maven should run on Java 21
+java -version
+mvn -v
 ```
 
-## 🚀 Quick start
-
+***
+## 🚀 Quick Start
 ```bash
 git clone https://github.com/manojjchahar/ECommerceFullTestFramework.git
 cd ECommerceFullTestFramework
 mvn clean test
 ```
-
 Notes:
-- The Maven Compiler Plugin is configured with `<release>21</release>`.
-- Annotation processing is disabled (`<proc>none</proc>`) to avoid loading stray processors (e.g., Lombok) unintentionally. If you adopt Lombok later, add Lombok as a dependency and remove `<proc>none</proc>`.
+- Compiler uses `<release>21`.
+- Annotation processing disabled (`<proc>none>`). Add Lombok later if needed.
 
+***
 ## 🎯 Application Coverage
 
-### UI Coverage
+### UI Feature Coverage (current implemented feature files)
+- UserAuthentication.feature (signup, login, account actions, duplicate registration)
+- ProductCatalog.feature (search, filter by category & brand, add to cart)
+- Cart.feature (add/remove items, checkout draft flow)
 
-- Login \& Sign-up flows (`/login`, `/signup`)
-- Home/dashboard/landing page (`/`)
-- Product catalog (`/products`)
-- Cart operations (`/view_cart`)
-- Orders and order history (`/orders`)
-- Profile \& account management (`/profile`)
-- Product review creation (`/products`)
-- Contact us form (`/contact_us`)
-- Navigation, filtering, popups, error handling
+### API Feature Coverage (current implemented feature files)
+- AuthAccountAPI.feature (register, login, update, fetch, delete lifecycle)
+- BrandsAPI.feature (brand list & schema validation)
+- ProductsAPI.feature (list, search, empty search cases, schema validation)
+- DataDrivenAPI.feature (multi-user login from JSON test data)
+- SecurityResiliencyAPI.feature (token resilience, error mapping, rate limit & retry behaviors)
 
-
-### API Coverage
-
-- POST login: `/api/verifyLogin`
-- POST create user: `/api/createAccount`
-- GET products: `/api/productsList`
-- GET brands: `/api/brandsList`
-- POST search product: `/api/searchProduct`
-- GET user details by email: `/api/getUserDetailByEmail`
-- DELETE account: `/api/deleteAccount`
-- PUT update account: `/api/updateAccount`
-- Response code, schema, boundary checks
+### Endpoint Set (resolved via APIEndpoints + ConfigReader)
+- POST /api/verifyLogin
+- POST /api/createAccount
+- PUT /api/updateAccount
+- GET /api/getUserDetailByEmail
+- DELETE /api/deleteAccount
+- GET /api/productsList
+- POST /api/searchProduct
+- GET /api/brandsList
+- External resiliency target: httpbin.org /status/200 /status/429 (simulated throttling)
 
 ***
-
-## 📂 Project Structure
-
+## 📂 Project Structure (current)
 ```
 ECommerceFullTestFramework/
-├── src/
-│   ├── main/java/com/ecommercefull/
-│   │   ├── base/
-│   │   │   ├── BaseTest.java
-│   │   │   ├── BaseAPI.java
-│   │   │   └── TestContext.java
-│   │   ├── pages/
-│   │   │   ├── LoginPage.java
-│   │   │   ├── SignupPage.java
-│   │   │   ├── ProductPage.java
-│   │   │   ├── CartPage.java
-│   │   │   ├── OrdersPage.java
-│   │   │   ├── ProfilePage.java
-│   │   │   ├── ReviewPage.java
-│   │   │   └── ContactUsPage.java
-│   │   ├── api/
-│   │   │   ├── AuthAPI.java
-│   │   │   ├── AccountAPI.java
-│   │   │   ├── ProductAPI.java
-│   │   │   ├── CartAPI.java
-│   │   │   ├── OrderAPI.java
-│   │   │   └── APIEndpoints.java
-│   │   ├── models/
-│   │   │   ├── User.java
-│   │   │   ├── Product.java
-│   │   │   ├── Order.java
-│   │   │   ├── Review.java
-│   │   │   ├── Cart.java
-│   │   │   └── AuthResponse.java
-│   │   ├── utils/
-│   │   │   ├── ConfigReader.java
-│   │   │   ├── WebDriverManager.java
-│   │   │   ├── ExtentReportManager.java
-│   │   │   └── JSONUtils.java
-│   ├── test/java/
-│   │   ├── stepDefinitions/
-│   │   │   ├── LoginSteps.java
-│   │   │   ├── SignupSteps.java
-│   │   │   ├── ProductSteps.java
-│   │   │   ├── CartSteps.java
-│   │   │   ├── OrderSteps.java
-│   │   │   ├── APISteps.java
-│   │   │   └── Hooks.java
-│   │   ├── runners/
-│   │   │   ├── TestRunner.java
-│   │   │   ├── SmokeTestRunner.java
-│   │   │   └── RegressionTestRunner.java
-│   │   ├── apiTests/
-│   │   │   ├── LoginAPITest.java
-│   │   │   ├── ProductAPITest.java
-│   │   │   ├── CartAPITest.java
-│   │   │   └── AccountAPITest.java
-├── resources/
-│   ├── features/
-│   │   ├── Login.feature
-│   │   ├── Signup.feature
-│   │   ├── Product.feature
-│   │   ├── Cart.feature
-│   │   ├── Order.feature
-│   │   ├── APIValidation.feature
-│   ├── testData/
-│   │   ├── users.json
-│   │   ├── products.json
-│   │   ├── orders.json
-│   │   ├── cart.json
-│   ├── schemas/
-│   │   ├── userSchema.json
-│   │   ├── productSchema.json
-│   │   ├── orderSchema.json
-│   │   ├── cartSchema.json
-│   ├── config/
-│   │   └── config.toml
-│   └── testng.xml
-├── azure-pipelines.yml
 ├── pom.xml
+├── azure-pipelines.yml
 ├── README-ECommerce-Test-Framework.md
-├── .gitignore
+├── HOW_TO_USE_TEST_DATA.md
+├── README-USING-TEST-DATA-AND-CONTEXT.md
+├── REFACTORED_EXAMPLES.md
+├── src/
+│   ├── main/
+│   │   ├── java/com/eCommerceTest/
+│   │   │   ├── api/
+│   │   │   │   ├── APIEndpoints.java
+│   │   │   │   ├── AccountAPI.java
+│   │   │   │   ├── AuthAPI.java
+│   │   │   │   ├── CartAPI.java
+│   │   │   │   ├── OrderAPI.java
+│   │   │   │   └── ProductAPI.java
+│   │   │   ├── base/
+│   │   │   │   ├── BaseAPI.java
+│   │   │   │   ├── BaseTest.java
+│   │   │   │   ├── IApiClient.java
+│   │   │   │   ├── ScenarioContext.java
+│   │   │   │   └── TestContext.java
+│   │   │   ├── models/
+│   │   │   │   ├── AuthResponse.java
+│   │   │   │   ├── Cart.java
+│   │   │   │   ├── Order.java
+│   │   │   │   ├── PaymentDetails.java
+│   │   │   │   ├── Product.java
+│   │   │   │   ├── Review.java
+│   │   │   │   ├── User.java
+│   │   │   │   └── UserRegistrationData.java
+│   │   │   ├── pages/
+│   │   │   │   ├── CartPage.java
+│   │   │   │   ├── CheckoutPage.java
+│   │   │   │   ├── ContactUsPage.java
+│   │   │   │   ├── LoginPage.java
+│   │   │   │   ├── PaymentPage.java
+│   │   │   │   ├── ProductPage.java
+│   │   │   │   ├── ProfilePage.java
+│   │   │   │   ├── ReviewPage.java
+│   │   │   │   └── SignupPage.java
+│   │   │   └── utils/
+│   │   │       ├── BrowserManager.java
+│   │   │       ├── ConfigReader.java
+│   │   │       ├── Constants.java
+│   │   │       ├── DataRepository.java
+│   │   │       ├── ExtentReportManager.java
+│   │   │       ├── Logging.java
+│   │   │       ├── RetryFilter.java
+│   │   │       ├── RetryPolicy.java
+│   │   │       ├── SchemaValidator.java
+│   │   │       ├── SchemaValidationReport.java
+│   │   │       ├── TestDataManager.java
+│   │   │       └── UiNavigator.java
+│   │   ├── resources/
+│   │   │   └── config/config.toml
+│   ├── test/
+│   │   ├── java/com/eCommerceTest/
+│   │   │   ├── apiTests/
+│   │   │   │   ├── AccountAPITest.java
+│   │   │   │   ├── CartAPITest.java
+│   │   │   │   ├── LoginAPITest.java
+│   │   │   │   └── ProductAPITest.java
+│   │   │   ├── listeners/
+│   │   │   │   ├── RetryAnalyzer.java
+│   │   │   │   └── RetryAnnotationTransformer.java
+│   │   │   ├── logging/
+│   │   │   │   └── LoggingSmokeTest.java
+│   │   │   ├── runners/
+│   │   │   │   ├── ParallelTestRunner.java
+│   │   │   │   └── SequentialTestRunner.java
+│   │   │   ├── stepDefinitions/
+│   │   │   │   ├── APISteps.java
+│   │   │   │   ├── CartSteps.java
+│   │   │   │   ├── Hooks.java
+│   │   │   │   ├── LoginSteps.java
+│   │   │   │   ├── ProductSteps.java
+│   │   │   │   └── SignupSteps.java
+│   │   ├── resources/
+│   │   │   ├── config/ (empty placeholder)
+│   │   │   ├── extent.properties
+│   │   │   ├── features/
+│   │   │   │   ├── API/
+│   │   │   │   │   ├── AuthAccountAPI.feature
+│   │   │   │   │   ├── BrandsAPI.feature
+│   │   │   │   │   ├── DataDrivenAPI.feature
+│   │   │   │   │   ├── ProductsAPI.feature
+│   │   │   │   │   └── SecurityResiliencyAPI.feature
+│   │   │   │   └── UI/
+│   │   │   │       ├── Cart.feature
+│   │   │   │       ├── ProductCatalog.feature
+│   │   │   │       └── UserAuthentication.feature
+│   │   │   ├── logback-test.xml
+│   │   │   ├── schemas/
+│   │   │   │   ├── brandSchema.json
+│   │   │   │   ├── cartSchema.json
+│   │   │   │   ├── orderSchema.json
+│   │   │   │   ├── productSchema.json
+│   │   │   │   └── userSchema.json
+│   │   │   ├── testData/
+│   │   │   │   ├── cart.json
+│   │   │   │   ├── orders.json
+│   │   │   │   ├── payments.json
+│   │   │   │   ├── products.json
+│   │   │   │   ├── registration-data.json
+│   │   │   │   └── users.json
+│   │   │   └── testNG.xml
+├── allure-results/ (generated report artifacts)
+├── target/ (build output)
+└── test-output/ (TestNG output)
 ```
 
-
 ***
-
-## ⚙️ Configuration Files
-
-**config.toml example:**
-
+## ⚙️ Configuration (config.toml)
+Minimal example:
 ```toml
 [ui]
 base_url = "https://www.automationexercise.com"
-login_page = "/login"
-signup_page = "/signup"
-products_page = "/products"
-cart_page = "/view_cart"
-orders_page = "/orders"
 
 [api]
 base_url = "https://automationexercise.com"
@@ -220,178 +242,269 @@ delete_account_endpoint = "/api/deleteAccount"
 update_account_endpoint = "/api/updateAccount"
 get_user_detail_by_email_endpoint = "/api/getUserDetailByEmail"
 ```
-
-
-***
-
-## 📖 Feature Files \& BDD Scenarios
-
-- **Login.feature:** UI and API login actions, negative path, session handling
-- **Signup.feature:** New user registration, both UI and API
-- **Product.feature:** Product browsing, search, filter, cart, reviews
-- **Order.feature:** Cart to order workflow, order history validation
-- **APIValidation.feature:** API-only flows, CRUD, schema checks
-
-Each scenario uses Given-When-Then syntax and data tables for dynamic parameters.
+Runtime overrides: pass `-Dapi.baseUrl=... -Dbrowser=chrome -Dheadless=true` etc.
 
 ***
+## 🧪 Execution & Runners
 
-## 🧪 Test Execution
-
-### Common Maven Commands
-
+Common Maven commands:
 ```bash
-# Run all tests (serial)
-mvn clean test
+# Full test run (parallel by default)
+mvn clean test -Dtest=ParallelTestRunner -Dcucumber.filter.tags="@ui or @api"
 
-# Run only smoke or regression scenarios
-mvn test -Dcucumber.filter.tags="@smoke"
-mvn test -Dcucumber.filter.tags="@regression"
+# Sequential execution (single thread)
+mvn test -Dtest=SequentialTestRunner -Dcucumber.filter.tags="@ui"
 
-# UI config flags
-mvn test -Dbrowser=chrome -Dheadless=true -Denvironment=test
+# Parallel with custom thread count
+mvn test -Dtest=ParallelTestRunner -Ddataproviderthreadcount=4 -Dcucumber.filter.tags="@ui"
 
-# Parallel run with TestNG DataProvider (Cucumber scenarios)
-mvn -Dtest=ParallelTestRunner test -Ddataproviderthreadcount=4
+# API only (parallel)
+mvn test -Dtest=ParallelTestRunner -Dcucumber.filter.tags="@api"
 
-# Apply flaky-test retries (both TestNG-level and Surefire reruns)
-mvn test -Dretry.count=1 -Dsurefire.rerunFailingTestsCount=1
+# Smoke / Regression via tags
+mvn test -Dtest=ParallelTestRunner -Dcucumber.filter.tags="@smoke"
+mvn test -Dtest=ParallelTestRunner -Dcucumber.filter.tags="@regression"
 
-# Execute on Selenium Grid (e.g., local Docker Grid)
-mvn -Dtest=ParallelTestRunner test -DgridUrl=http://localhost:4444/wd/hub -Dheadless=true -Ddataproviderthreadcount=4
+# Dry-run (step definitions completeness)
+mvn test -Dtest=ParallelTestRunner -Dcucumber.execution.dry-run=true -Dcucumber.filter.tags="@api"
+```
+Tag strategy examples:
+- `@API`, `@UI`, `@negative`, `@security`, `@ratelimit`, `@account`, `@ProductsAPI` etc.
+Combine with logical expressions: `-Dcucumber.filter.tags="@API and not @negative"`.
+
+***
+## 🗓 Recent Changes
+- 2025-11: Added resiliency/rate-limit feature set & retry strategies.
+- 2025-11: Upgraded to Java 21 toolchain & aligned plugins.
+- 2025-11: Integrated Allure adapters (results present under allure-results/).
+- 2025-11: Refactoring: consolidated utilities (BrowserManager, DataRepository, RetryPolicy, SchemaValidationReport).
+- 2025-11: Removed legacy util classes: DriverFactory, WaitFactory, JSONUtils, TestDataLoader, FixedDelayRetryStrategy, ExponentialBackoffRetryStrategy.
+
+## ♻ Refactoring & Consolidated Utilities (Updated)
+Unified components now:
+- BrowserManager: Lifecycle + waits (replaces DriverFactory & WaitFactory).
+- DataRepository: Generic cached JSON/resource loader (replaces JSONUtils & TestDataLoader).
+- RetryPolicy + RetryFilter: Single entry for FIXED / EXPONENTIAL strategies via builder (legacy strategy classes removed).
+- SchemaValidator + SchemaValidationReport: Rich schema validation + violations.
+- TestDataManager: High-level domain data access built atop DataRepository.
+
+Removed (fully deleted or stubbed): DriverFactory, WaitFactory, JSONUtils, TestDataLoader, FixedDelayRetryStrategy, ExponentialBackoffRetryStrategy.
+
+Migration notes:
+- Replace any direct JSONUtils.read* calls with DataRepository.load(path, TypeReference).
+- Replace FixedDelayRetryStrategy/ExponentialBackoffRetryStrategy with RetryPolicy.builder().fixed()/exponential().
+- Use BrowserManager.init()/getDriver()/quit() and BrowserManager.waitShort()/waitLong().
+
+Example updated usage:
+```java
+RetryPolicy policy = RetryPolicy.builder()
+        .exponential()
+        .attempts(4)
+        .baseDelay(250)
+        .maxDelay(3000)
+        .codes(java.util.Set.of(429,500,503))
+        .build();
+new RetryFilter(policy);
+
+var users = DataRepository.load("/testData/users.json", new com.fasterxml.jackson.core.type.TypeReference<java.util.List<com.eCommerceTest.models.User>>(){});
+var report = SchemaValidator.validate(response, "/schemas/productSchema.json");
+assert report.isSuccess() : report.getViolations();
 ```
 
+## 🔄 Resiliency & Retry Design
+- Single `RetryPolicy` enum with builder supports FIXED and EXPONENTIAL (with optional jitter, status code set).
+- `RetryFilter` applies policy; removed separate strategy classes.
+- Rate limit simulation via httpbin `/status/429` validates backoff & attempt count.
 
-### Parallelization
-
-Use `maven-surefire-plugin` and TestNG for running tests in parallel (methods/classes).
+## 🗃 Test Data Management
+- DataRepository provides unified cached JSON loading.
+- TestDataManager offers domain-specific accessors (users, products, payments, registration profiles).
+- `selectRecord(file, key)` helper replaces former TestDataLoader behavior.
 
 ***
+## 📑 Schema Validation
+Schemas stored in `src/test/resources/schemas/` and validated with Rest Assured + `SchemaValidator` utility for: product, brand, user, cart, order.
 
+***
 ## 📊 Reporting
 
-- **ExtentReports:** HTML, chart/graph, logs, screenshots
-- **Cucumber Reports:** JSON, HTML, XML
-- **TestNG Reporting:** HTML, XML
-- **Allure (optional):** Advanced drilldown
+The framework integrates **four comprehensive reporting tools** that automatically generate detailed test execution reports. Each serves a specific purpose and provides unique insights into test results.
 
-Error screenshots and logs captured for debugging.
+### 1️⃣ Cucumber HTML Report
+**Purpose**: Standard BDD-style report showing feature files, scenarios, and steps execution.
 
-***
-
-## 🔁 CI/CD Pipeline (Azure DevOps YAML)
-
-This project ships with an Azure Pipelines YAML configured for Java 21. It builds, tests, and publishes reports on every commit/merge.
-
-Key variables:
-- `JAVA_VERSION`: `'21'`
-- `MAVEN_GOALS`: `'clean test'`
-
-Example pipeline:
-```yaml
-trigger:
-  branches:
-    include:
-      - main
-      - master
-
-pool:
-  vmImage: 'windows-latest'
-
-variables:
-  MAVEN_OPTS: '-Xmx1024m'
-  JAVA_VERSION: '21'
-  MAVEN_GOALS: 'clean test'
-
-steps:
-  - task: UseJavaVersion@1
-    inputs:
-      versionSpec: '$(JAVA_VERSION)'
-      architecture: 'x64'
-
-  - task: Maven@3
-    inputs:
-      mavenPomFile: 'pom.xml'
-      goals: '$(MAVEN_GOALS)'
-      options: '-Dcucumber.filter.tags=$(cucumberTags) -Dbrowser=$(browser)'
-      publishJUnitResults: true
-      testResultsFiles: '**/surefire-reports/*.xml'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '$(JAVA_VERSION)'
-      mavenOptions: '-Xmx1024m'
-      sonarQubeRunAnalysis: false
-      sqMavenPluginVersionChoice: 'latest'
-
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Cucumber and Extent reports'
-    inputs:
-      PathtoPublish: 'target'
-      ArtifactName: 'reports'
-      publishLocation: 'Container'
+**Configuration**: Configured in `SequentialTestRunner.java` and `ParallelTestRunner.java` via the `plugin` option:
+```java
+"html:target/cucumber-reports/sequential.html",
+"json:target/cucumber-reports/sequential.json"
 ```
 
-## 🧰 Build Notes
+**Output Locations**:
+- HTML Report: `target/cucumber-reports/sequential.html` (or `parallel.html`)
+- JSON Data: `target/cucumber-reports/sequential.json` (or `parallel.json`)
 
-- Java 21 toolchain: Maven Compiler Plugin configured with `<release>21</release>`; project `maven.compiler.source/target` set to `21`.
-- Test execution: Maven Surefire Plugin `3.2.5` for JDK 21 compatibility.
-- Java version enforcement: Maven Enforcer Plugin requires Java `[21,22)` to prevent accidental builds on the wrong JDK.
-- Annotation processing: disabled via `<proc>none</proc>` to avoid loading stray processors (e.g., Lombok). If you adopt Lombok later, add Lombok as a dependency and remove `<proc>none</proc>`.
+**How to View**: 
+```bash
+mvn clean test
+# Open: target/cucumber-reports/sequential.html in a browser
+```
 
-## 🗓 Changelog
+---
 
-- 2025-11-01: Upgraded build to JDK 21. Updated `pom.xml` (compiler to 21, Surefire 3.2.5, Enforcer rule for 21) and `azure-pipelines.yml` (`JAVA_VERSION: '21'`). README updated to reflect these changes.
+### 2️⃣ Extent Reports
+**Purpose**: Rich, interactive HTML report with charts, logs, system info, and embedded screenshots.
+
+**Configuration**: Configured via `extent.properties`:
+```properties
+extent.reporter.spark.start=true
+extent.reporter.spark.out=target/extent/ExtentReport.html
+screenshot.dir=target/extent/screenshots
+```
+
+**Output Locations**:
+- HTML Report: `target/extent/ExtentReport.html`
+- Screenshots: `target/extent/screenshots/`
+
+**How to View**:
+```bash
+mvn clean test
+# Open: target/extent/ExtentReport.html in a browser
+```
+
+**Features**:
+- Dashboard with pass/fail/skip statistics
+- Execution timeline and duration metrics
+- System information (OS, Java version, user)
+- Embedded screenshots on test failures
+- Beautiful charts and graphs
+
+---
+
+### 3️⃣ Allure Report
+**Purpose**: Enterprise-grade reporting with test history, trends, categories, and comprehensive test analytics.
+
+**Configuration**: Configured in `pom.xml` via:
+- Allure Cucumber 7 adapter dependency
+- Allure Maven plugin
+- AspectJ weaver for report generation
+
+**Output Locations**:
+- Raw Results: `target/allure-results/` (JSON and XML files)
+- Generated HTML: `target/site/allure-maven-plugin/` (after running report command)
+
+**How to Generate and View**:
+```bash
+# Option 1: Generate and serve report (opens in browser automatically)
+mvn clean test
+mvn allure:serve
+
+# Option 2: Generate static HTML report
+mvn clean test
+mvn allure:report
+# Open: target/site/allure-maven-plugin/index.html in a browser
+```
+
+**Features**:
+- Test execution trends and history
+- Categorization by features and suites
+- Detailed step-by-step execution logs
+- Environment and configuration details
+- REST API request/response logging (via allure-rest-assured)
+- Screenshots and attachments
+- Flaky test detection
+- Timeline view
+
+---
+
+### 4️⃣ Maven Surefire Report
+**Purpose**: Standard Maven test execution report integrated with Maven site lifecycle.
+
+**Configuration**: Configured in `pom.xml` via `maven-surefire-report-plugin`:
+```xml
+<plugin>
+    <artifactId>maven-surefire-report-plugin</artifactId>
+    <version>3.2.5</version>
+</plugin>
+```
+
+**Output Locations**:
+- Test Results XML: `target/surefire-reports/*.xml`
+- HTML Report: `target/site/surefire-report.html` (after running report command)
+
+**How to Generate and View**:
+```bash
+# Option 1: Generate during verify phase
+mvn clean verify
+# Open: target/site/surefire-report.html
+
+# Option 2: Generate report explicitly
+mvn clean test
+mvn surefire-report:report
+# Open: target/site/surefire-report.html
+```
+
+**Features**:
+- TestNG test results summary
+- Pass/fail/skip statistics
+- Execution time per test
+- Error messages and stack traces
+- Suite-level aggregation
+
+---
+
+### 📁 Quick Reference: Output Folders
+
+| Report Type | Output Location | View Command |
+|-------------|----------------|--------------|
+| **Cucumber HTML** | `target/cucumber-reports/sequential.html` | Open file directly in browser |
+| **Extent Reports** | `target/extent/ExtentReport.html` | Open file directly in browser |
+| **Allure Results** | `target/allure-results/` (raw data) | `mvn allure:serve` or `mvn allure:report` |
+| **Allure HTML** | `target/site/allure-maven-plugin/` | Open `index.html` after `mvn allure:report` |
+| **Surefire Report** | `target/site/surefire-report.html` | Open after `mvn verify` or `mvn surefire-report:report` |
+| **Screenshots** | `target/extent/screenshots/` | Embedded in Extent and Allure reports |
+
+### 🎯 Recommended Workflow
+
+**For Local Development**:
+```bash
+mvn clean test
+# View Extent Report immediately (fastest to open)
+# Open: target/extent/ExtentReport.html
+```
+
+**For Detailed Analysis**:
+```bash
+mvn clean test allure:serve
+# Allure opens automatically with comprehensive analytics
+```
+
+**For CI/CD Pipelines**:
+```bash
+mvn clean verify allure:report
+# All reports generated, Allure HTML available in target/site/
+# Archive target/extent/, target/allure-results/, target/site/ as artifacts
+```
 
 ***
-
-## 📦 Data Files
-
-- Sample/test users, products, cart and order objects in JSON
-- Utilities for generation and loading of test data
-
-***
-
-## 👩‍🔬 Sample End-to-End Scenario
-
-**End-to-End Flow:**
-
-1. Register user (UI \& API)
-2. Login user (UI \& API)
-3. Browse/search products, add item to cart
-4. Submit product review, validate in UI and via API
-5. Place order, check order history in UI and backend response (API)
-6. Update or delete account
-7. Log out and verify session termination
-
-All steps validated by both Selenium UI checks and direct API calls.
+## 🧰 Build & Quality Notes
+- Java enforced via Maven Enforcer `[21,22)`.
+- Surefire 3.2.5 for JDK 21 compatibility & rerun support.
+- Logging: SLF4J API + Logback test configuration (`logback-test.xml`).
+- Assertions: TestNG + AssertJ (fluent for complex model validation).
 
 ***
-
-## 📝 Contribution \& Best Practices
-
-- Code reviews and adherence to SOLID, DRY design
-- POM and API client abstraction
-- Data-driven, modular, maintainable patterns
-- Documentation and test case expansion
-- CI validation before merge
-- Issue reporting and enhancement proposals via GitHub
+## 📝 Contribution Standards
+- Follow existing layering (api/base/models/pages/utils/stepDefinitions).
+- Keep page object actions atomic & log start/end for traceability.
+- Prefer AssertJ for expressive model assertions; TestNG for simple boolean/status.
+- Add schema updates alongside endpoint changes.
+- Tag new scenarios appropriately to avoid unintended inclusion in pipeline runs.
 
 ***
-
-## 📄 License
-
-MIT License - see LICENSE in repo.
-
-***
-
-## ♥ Why use ECommerceFullTestFramework?
-
-- Real world website (‘AutomationExercise’) with dynamic data
-- Full stack: UI + API with live endpoints
-- Modern architecture and reporting
-- CI/CD and parallel test support
-- Portfolio-ready for job interviews and role advancement
+## ♥ Why this Framework
+- Demonstrates end-to-end UI + API synergy.
+- Includes advanced patterns (retry, resiliency, data-driven, schema validation).
+- Ready for CI/CD & parallel scaling.
 
 ***
-
-**Made with pride for advanced Test Automation practice and career growth.**
-
+**Made for advanced Test Automation practice & career growth.**

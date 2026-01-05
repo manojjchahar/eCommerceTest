@@ -1,6 +1,6 @@
-package com.ecommercefull.apiTests;
+package com.eCommerceTest.apiTests;
 
-import com.ecommercefull.api.AuthAPI;
+import com.eCommerceTest.api.AuthAPI;
 import io.restassured.response.Response;
 import org.testng.Assert;
 import org.testng.annotations.Test;

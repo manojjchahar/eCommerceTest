@@ -1,4 +1,4 @@
-package com.ecommercefull.models;
+package com.eCommerceTest.models;
 
 public class Product {
     private int id;

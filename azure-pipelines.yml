@@ -20,6 +20,8 @@ variables:
   waitPollingMillis: '750'
   gridUrl: '' # set to your Grid hub URL to enable remote execution
   retryCount: '1'
+  allureReportDir: 'target/site/allure-maven-plugin'
+  allureResultsDir: 'target/allure-results'
 
 steps:
   - task: UseJavaVersion@1
@@ -40,17 +42,18 @@ steps:
       mavenPomFile: 'pom.xml'
       goals: '$(MAVEN_GOALS)'
       options: >
-        -Dtest=ParallelTestRunner
-        -Dcucumber.filter.tags=$(cucumberTags)
-        -Dbrowser=$(browser)
-        -Ddataproviderthreadcount=$(dataproviderthreadcount)
-        -Dheadless=$(headless)
-        -Dwait.short.timeout=$(waitShortTimeout)
-        -Dwait.long.timeout=$(waitLongTimeout)
-        -Dwait.polling.millis=$(waitPollingMillis)
-        -DgridUrl=$(gridUrl)
-        -Dretry.count=$(retryCount)
-        -Dsurefire.rerunFailingTestsCount=$(retryCount)
+        -Dtest=ParallelTestRunner \
+        -Dcucumber.filter.tags=$(cucumberTags) \
+        -Dbrowser=$(browser) \
+        -Ddataproviderthreadcount=$(dataproviderthreadcount) \
+        -Dheadless=$(headless) \
+        -Dwait.short.timeout=$(waitShortTimeout) \
+        -Dwait.long.timeout=$(waitLongTimeout) \
+        -Dwait.polling.millis=$(waitPollingMillis) \
+        -DgridUrl=$(gridUrl) \
+        -Dretry.count=$(retryCount) \
+        -Dsurefire.rerunFailingTestsCount=$(retryCount) \
+        -Dallure.results.directory=$(allureResultsDir)
       publishJUnitResults: true
       testResultsFiles: '**/surefire-reports/*.xml'
       javaHomeOption: 'JDKVersion'
@@ -59,9 +62,28 @@ steps:
       sonarQubeRunAnalysis: false
       sqMavenPluginVersionChoice: 'latest'
 
+  - script: mvn allure:report -DskipTests
+    displayName: 'Generate Allure Report'
+
   - task: PublishBuildArtifacts@1
-    displayName: 'Publish Cucumber and Extent reports'
+    displayName: 'Publish Cucumber, Extent, Allure results'
     inputs:
       PathtoPublish: 'target'
       ArtifactName: 'reports'
+      publishLocation: 'Container'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Allure Report (HTML)'
+    condition: succeeded()
+    inputs:
+      PathtoPublish: '$(allureReportDir)'
+      ArtifactName: 'allure-report'
+      publishLocation: 'Container'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Allure Raw Results'
+    condition: succeeded()
+    inputs:
+      PathtoPublish: '$(allureResultsDir)'
+      ArtifactName: 'allure-results'
       publishLocation: 'Container'

@@ -7,11 +7,10 @@
         <!-- Auto-apply retry to all @Test methods via annotation transformer -->
         <listener class-name="com.eCommerceTest.listeners.RetryAnnotationTransformer"/>
     </listeners>
-    <test name="Cucumber All (Local Serial)">
+    <test name="Cucumber Unified">
         <classes>
-            <class name="com.eCommerceTest.runners.TestRunner"/>
-            <class name="com.eCommerceTest.runners.SmokeTestRunner"/>
-            <class name="com.eCommerceTest.runners.RegressionTestRunner"/>
+            <class name="com.eCommerceTest.runners.ParallelTestRunner"/>
+            <class name="com.eCommerceTest.runners.SequentialTestRunner"/>
         </classes>
     </test>
 </suite>

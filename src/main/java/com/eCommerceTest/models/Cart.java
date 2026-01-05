@@ -1,4 +1,4 @@
-package com.ecommercefull.models;
+package com.eCommerceTest.models;
 
 import java.util.ArrayList;
 import java.util.List;

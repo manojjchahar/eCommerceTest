@@ -1,6 +1,6 @@
-package com.ecommercefull.api;
+package com.eCommerceTest.api;
 
-import com.ecommercefull.utils.ConfigReader;
+import com.eCommerceTest.utils.ConfigReader;
 
 public final class APIEndpoints {
 

@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "Blue Top", "brand": "BrandA", "price": 24.99 },
+  { "id": 2, "name": "T-Shirt", "brand": "BrandB", "price": 16.50 },
+  { "id": 3, "name": "Casual Dress", "brand": "BrandC", "price": 39.99 }
+]

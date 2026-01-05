@@ -1,0 +1,18 @@
+[ui]
+base_url = "https://www.automationexercise.com"
+login_page = "/login"
+signup_page = "/signup"
+products_page = "/products"
+cart_page = "/view_cart"
+orders_page = "/orders"
+
+[api]
+base_url = "https://automationexercise.com"
+login_endpoint = "/api/verifyLogin"
+register_endpoint = "/api/createAccount"
+products_list_endpoint = "/api/productsList"
+search_product_endpoint = "/api/searchProduct"
+brands_list_endpoint = "/api/brandsList"
+delete_account_endpoint = "/api/deleteAccount"
+update_account_endpoint = "/api/updateAccount"
+get_user_detail_by_email_endpoint = "/api/getUserDetailByEmail"

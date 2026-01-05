@@ -1,0 +1,67 @@
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  MAVEN_OPTS: '-Xmx1024m'
+  JAVA_VERSION: '21'
+  MAVEN_GOALS: 'clean verify'
+  cucumberTags: '@ui'
+  browser: 'chrome'
+  dataproviderthreadcount: '2'
+  headless: 'true'
+  waitShortTimeout: '25'
+  waitLongTimeout: '35'
+  waitPollingMillis: '750'
+  gridUrl: '' # set to your Grid hub URL to enable remote execution
+  retryCount: '1'
+
+steps:
+  - task: UseJavaVersion@1
+    inputs:
+      versionSpec: '$(JAVA_VERSION)'
+      architecture: 'x64'
+
+  # Cache the local Maven repository to speed up builds
+  - task: Cache@2
+    inputs:
+      key: 'maven | "$(Agent.OS)" | **/pom.xml'
+      restoreKeys: |
+        maven | "$(Agent.OS)"
+      path: '$(UserProfile)\/.m2\/repository'
+
+  - task: Maven@3
+    inputs:
+      mavenPomFile: 'pom.xml'
+      goals: '$(MAVEN_GOALS)'
+      options: >
+        -Dtest=ParallelTestRunner
+        -Dcucumber.filter.tags=$(cucumberTags)
+        -Dbrowser=$(browser)
+        -Ddataproviderthreadcount=$(dataproviderthreadcount)
+        -Dheadless=$(headless)
+        -Dwait.short.timeout=$(waitShortTimeout)
+        -Dwait.long.timeout=$(waitLongTimeout)
+        -Dwait.polling.millis=$(waitPollingMillis)
+        -DgridUrl=$(gridUrl)
+        -Dretry.count=$(retryCount)
+        -Dsurefire.rerunFailingTestsCount=$(retryCount)
+      publishJUnitResults: true
+      testResultsFiles: '**/surefire-reports/*.xml'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '$(JAVA_VERSION)'
+      mavenOptions: '-Xmx1024m'
+      sonarQubeRunAnalysis: false
+      sqMavenPluginVersionChoice: 'latest'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Cucumber and Extent reports'
+    inputs:
+      PathtoPublish: 'target'
+      ArtifactName: 'reports'
+      publishLocation: 'Container'

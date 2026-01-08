@@ -1,9 +1,106 @@
+# ============================================
+# ON-DEMAND PARAMETERS (for manual/scheduled runs)
+# ============================================
+parameters:
+  - name: cucumberTags
+    displayName: 'Cucumber Tags to Run'
+    type: string
+    default: '@eCommFull'
+    values:
+      - '@eCommFull'
+      - '@UI'
+      - '@API'
+      - '@Authentication'
+      - '@Products'
+      - '@Cart'
+      - '@ProductsAPI'
+      - '@BrandsAPI'
+      - '@DataDrivenAPI'
+      - '@AuthenticationAPI'
+      - '@UI and @Authentication'
+      - '@UI and @Products'
+      - '@UI and @Cart'
+      - '@API and @ProductsAPI'
+      - '@API and @BrandsAPI'
+
+  - name: browser
+    displayName: 'Browser'
+    type: string
+    default: 'chrome'
+    values:
+      - 'chrome'
+      - 'firefox'
+      - 'edge'
+
+  - name: headless
+    displayName: 'Run Headless'
+    type: boolean
+    default: true
+
+  - name: parallelThreads
+    displayName: 'Parallel Thread Count'
+    type: number
+    default: 2
+    values:
+      - 1
+      - 2
+      - 4
+      - 6
+
+  - name: retryCount
+    displayName: 'Retry Failed Tests Count'
+    type: number
+    default: 1
+    values:
+      - 0
+      - 1
+      - 2
+      - 3
+
+# ============================================
+# TRIGGERS
+# ============================================
+
+# CI Trigger - on push to main/master
 trigger:
   branches:
     include:
       - main
       - master
 
+# PR Trigger - on pull requests
+pr:
+  branches:
+    include:
+      - main
+      - master
+
+# Scheduled Triggers - Nightly and Weekly
+schedules:
+  # Nightly run - Every weekday at 2:00 AM IST (8:30 PM UTC previous day)
+  # Runs BOTH UI and API tests
+  - cron: '30 20 * * 0-4'
+    displayName: 'Nightly Full Tests (Mon-Fri 2:00 AM IST)'
+    branches:
+      include:
+        - main
+        - master
+    always: false  # Only run if there are changes
+    batch: true
+
+  # Weekly Full Suite - Every Saturday at 3:00 AM IST (9:30 PM UTC Friday)
+  - cron: '30 21 * * 5'
+    displayName: 'Weekly Full Suite (Sat 3:00 AM IST)'
+    branches:
+      include:
+        - main
+        - master
+    always: true  # Run even if no changes
+    batch: true
+
+# ============================================
+# POOL & VARIABLES
+# ============================================
 pool:
   vmImage: 'windows-latest'
 
@@ -11,15 +108,23 @@ variables:
   MAVEN_OPTS: '-Xmx1024m'
   JAVA_VERSION: '21'
   MAVEN_GOALS: 'clean verify'
-  cucumberTags: '@ui'
-  browser: 'chrome'
-  dataproviderthreadcount: '2'
-  headless: 'true'
+  # Use parameter values if manually triggered, otherwise use defaults
+  ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
+    # All scheduled runs use @eCommFull (full suite - both UI and API)
+    cucumberTags: '@eCommFull'
+  ${{ elseif eq(variables['Build.Reason'], 'Manual') }}:
+    cucumberTags: '${{ parameters.cucumberTags }}'
+  ${{ else }}:
+    # CI/PR triggers run UI tests only (faster feedback)
+    cucumberTags: '@UI'
+  browser: '${{ parameters.browser }}'
+  dataproviderthreadcount: '${{ parameters.parallelThreads }}'
+  headless: '${{ parameters.headless }}'
   waitShortTimeout: '25'
   waitLongTimeout: '35'
   waitPollingMillis: '750'
   gridUrl: '' # set to your Grid hub URL to enable remote execution
-  retryCount: '1'
+  retryCount: '${{ parameters.retryCount }}'
   allureReportDir: 'target/site/allure-maven-plugin'
   allureResultsDir: 'target/allure-results'
 

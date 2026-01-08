@@ -144,30 +144,33 @@ steps:
         maven | "$(Agent.OS)"
       path: '$(UserProfile)\/.m2\/repository'
 
-  - task: Maven@3
-    inputs:
-      mavenPomFile: 'pom.xml'
-      goals: '$(MAVEN_GOALS)'
-      options: >
-        -Dtest=ParallelTestRunner \
-        -Dcucumber.filter.tags=$(cucumberTags) \
-        -Dbrowser=$(browser) \
-        -Ddataproviderthreadcount=$(dataproviderthreadcount) \
-        -Dheadless=$(headless) \
-        -Dwait.short.timeout=$(waitShortTimeout) \
-        -Dwait.long.timeout=$(waitLongTimeout) \
-        -Dwait.polling.millis=$(waitPollingMillis) \
-        -DgridUrl=$(gridUrl) \
-        -Dretry.count=$(retryCount) \
-        -Dsurefire.rerunFailingTestsCount=$(retryCount) \
+  # Run Maven tests using script (avoids capability demands for self-hosted agents)
+  - script: |
+      mvn $(MAVEN_GOALS) ^
+        -Dtest=ParallelTestRunner ^
+        -Dcucumber.filter.tags="$(cucumberTags)" ^
+        -Dbrowser=$(browser) ^
+        -Ddataproviderthreadcount=$(dataproviderthreadcount) ^
+        -Dheadless=$(headless) ^
+        -Dwait.short.timeout=$(waitShortTimeout) ^
+        -Dwait.long.timeout=$(waitLongTimeout) ^
+        -Dwait.polling.millis=$(waitPollingMillis) ^
+        -DgridUrl=$(gridUrl) ^
+        -Dretry.count=$(retryCount) ^
+        -Dsurefire.rerunFailingTestsCount=$(retryCount) ^
         -Dallure.results.directory=$(allureResultsDir)
-      publishJUnitResults: true
+    displayName: 'Run Maven Tests'
+    env:
+      MAVEN_OPTS: '$(MAVEN_OPTS)'
+
+  # Publish JUnit test results
+  - task: PublishTestResults@2
+    displayName: 'Publish JUnit Test Results'
+    condition: always()
+    inputs:
+      testResultsFormat: 'JUnit'
       testResultsFiles: '**/surefire-reports/*.xml'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '$(JAVA_VERSION)'
-      mavenOptions: '-Xmx1024m'
-      sonarQubeRunAnalysis: false
-      sqMavenPluginVersionChoice: 'latest'
+      failTaskOnFailedTests: true
 
   - script: mvn allure:report -DskipTests
     displayName: 'Generate Allure Report'

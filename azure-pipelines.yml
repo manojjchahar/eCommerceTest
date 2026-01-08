@@ -129,10 +129,12 @@ variables:
   allureResultsDir: 'target/allure-results'
 
 steps:
-  - task: UseJavaVersion@1
+  - task: JavaToolInstaller@0
+    displayName: 'Install Java $(JAVA_VERSION)'
     inputs:
       versionSpec: '$(JAVA_VERSION)'
-      architecture: 'x64'
+      jdkArchitectureOption: 'x64'
+      jdkSourceOption: 'PreInstalled'
 
   # Cache the local Maven repository to speed up builds
   - task: Cache@2

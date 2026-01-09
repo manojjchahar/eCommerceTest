@@ -26,6 +26,7 @@ The goal is to deliver portfolio-level, industry-standard automation that is eas
 ## ✨ Key Features
 
 - UI automation with **Selenium WebDriver** & Page Objects
+- **Screenplay Pattern** implementation (Actor, Task, Ability)
 - API automation with **Rest Assured** (client abstraction + endpoint constants)
 - BDD using **Cucumber** (Gherkin feature specs, tags strategy)
 - Data-driven testing via centralized JSON test data + dynamic record selection
@@ -37,6 +38,10 @@ The goal is to deliver portfolio-level, industry-standard automation that is eas
 - Flaky-test mitigation: **TestNG RetryAnalyzer** + optional Surefire reruns
 - Config-driven execution (TOML config + runtime system properties)
 - Parallel-ready via TestNG DataProvider & dedicated parallel runner
+- **Multi-platform CI/CD**: Azure DevOps + GitLab CI with on-demand parameters
+- **Selenium Grid 4.27**: Docker Compose with video recording & VNC
+- **Kubernetes ready**: Helm chart for enterprise scaling
+- **Multi-repository sync**: Push to Azure DevOps, GitLab, GitHub simultaneously
 - Clean code aligned with SOLID/DRY & layered architecture (pages, api, models, utils)
 
 ***
@@ -243,116 +248,123 @@ Notes:
 ## 📂 Project Structure (current)
 ```
 ECommerceFullTestFramework/
-├── pom.xml
-├── azure-pipelines.yml
-├── README-ECommerce-Test-Framework.md
-├── HOW_TO_USE_TEST_DATA.md
-├── README-USING-TEST-DATA-AND-CONTEXT.md
-├── REFACTORED_EXAMPLES.md
+├── pom.xml                                    # Maven build configuration
+├── azure-pipelines.yml                        # Azure DevOps CI/CD pipeline
+├── .gitlab-ci.yml                             # GitLab CI/CD pipeline
+├── docker-compose.yml                         # Selenium Grid 4.27 with video/VNC
+├── config.toml                                # Root config file
+├── README-ECommerce-Test-Framework.md         # Main documentation
+├── README-DataExternalization-ScenarioContext.md  # Data externalization guide
+├── infrastructure/
+│   └── k8s/
+│       ├── selenium-grid-values.yaml          # Kubernetes Helm values
+│       └── README.md                          # K8s deployment guide
 ├── src/
 │   ├── main/
 │   │   ├── java/com/eCommerceTest/
-│   │   │   ├── api/
+│   │   │   ├── api/                           # API client classes
 │   │   │   │   ├── APIEndpoints.java
 │   │   │   │   ├── AccountAPI.java
 │   │   │   │   ├── AuthAPI.java
 │   │   │   │   ├── CartAPI.java
-│   │   │   │   ├── OrderAPI.java
 │   │   │   │   └── ProductAPI.java
-│   │   │   ├── base/
+│   │   │   ├── base/                          # Base classes & context
 │   │   │   │   ├── BaseAPI.java
 │   │   │   │   ├── BaseTest.java
 │   │   │   │   ├── IApiClient.java
 │   │   │   │   ├── ScenarioContext.java
 │   │   │   │   └── TestContext.java
-│   │   │   ├── models/
+│   │   │   ├── models/                        # POJOs for data
 │   │   │   │   ├── AuthResponse.java
 │   │   │   │   ├── Cart.java
-│   │   │   │   ├── Order.java
 │   │   │   │   ├── PaymentDetails.java
 │   │   │   │   ├── Product.java
-│   │   │   │   ├── Review.java
 │   │   │   │   ├── User.java
 │   │   │   │   └── UserRegistrationData.java
-│   │   │   ├── pages/
+│   │   │   ├── pages/                         # Page Objects
 │   │   │   │   ├── CartPage.java
 │   │   │   │   ├── CheckoutPage.java
-│   │   │   │   ├── ContactUsPage.java
 │   │   │   │   ├── LoginPage.java
 │   │   │   │   ├── PaymentPage.java
 │   │   │   │   ├── ProductPage.java
-│   │   │   │   ├── ProfilePage.java
-│   │   │   │   ├── ReviewPage.java
 │   │   │   │   └── SignupPage.java
-│   │   │   └── utils/
-│   │   │       ├── BrowserManager.java
-│   │   │       ├── ConfigReader.java
-│   │   │       ├── Constants.java
-│   │   │       ├── DataRepository.java
-│   │   │       ├── ExtentReportManager.java
-│   │   │       ├── Logging.java
-│   │   │       ├── RetryFilter.java
-│   │   │       ├── RetryPolicy.java
-│   │   │       ├── SchemaValidator.java
+│   │   │   ├── screenplay/                    # Screenplay Pattern (NEW)
+│   │   │   │   ├── Ability.java               # Base ability interface
+│   │   │   │   ├── Actor.java                 # Actor implementation
+│   │   │   │   ├── Task.java                  # Task interface
+│   │   │   │   ├── abilities/
+│   │   │   │   │   └── BrowseTheWeb.java      # Web browsing ability
+│   │   │   │   └── tasks/
+│   │   │   │       └── Login.java             # Login task
+│   │   │   └── utils/                         # Utility classes
+│   │   │       ├── BrowserManager.java        # WebDriver lifecycle
+│   │   │       ├── ConfigReader.java          # TOML config
+│   │   │       ├── Constants.java             # Constants
+│   │   │       ├── DataRepository.java        # JSON data loader
+│   │   │       ├── ExtentReportManager.java   # Extent Reports
+│   │   │       ├── Logging.java               # SLF4J logging
+│   │   │       ├── RetryFilter.java           # API retry filter
+│   │   │       ├── RetryPolicy.java           # Retry strategies
+│   │   │       ├── SchemaValidator.java       # JSON schema validation
 │   │   │       ├── SchemaValidationReport.java
-│   │   │       ├── TestDataManager.java
-│   │   │       └── UiNavigator.java
-│   │   ├── resources/
-│   │   │   └── config/config.toml
+│   │   │       ├── TestDataManager.java       # Test data access
+│   │   │       └── UiNavigator.java           # Navigation helper
+│   │   └── resources/
+│   │       └── config/config.toml
 │   ├── test/
 │   │   ├── java/com/eCommerceTest/
-│   │   │   ├── apiTests/
+│   │   │   ├── apiTests/                      # API test classes
 │   │   │   │   ├── AccountAPITest.java
 │   │   │   │   ├── CartAPITest.java
 │   │   │   │   ├── LoginAPITest.java
 │   │   │   │   └── ProductAPITest.java
-│   │   │   ├── listeners/
+│   │   │   ├── listeners/                     # TestNG listeners
 │   │   │   │   ├── RetryAnalyzer.java
 │   │   │   │   └── RetryAnnotationTransformer.java
 │   │   │   ├── logging/
 │   │   │   │   └── LoggingSmokeTest.java
-│   │   │   ├── runners/
+│   │   │   ├── runners/                       # Cucumber runners
 │   │   │   │   ├── ParallelTestRunner.java
 │   │   │   │   └── SequentialTestRunner.java
-│   │   │   ├── stepDefinitions/
-│   │   │   │   ├── APISteps.java
-│   │   │   │   ├── CartSteps.java
-│   │   │   │   ├── Hooks.java
-│   │   │   │   ├── LoginSteps.java
-│   │   │   │   ├── ProductSteps.java
-│   │   │   │   └── SignupSteps.java
-│   │   ├── resources/
-│   │   │   ├── config/ (empty placeholder)
-│   │   │   ├── extent.properties
-│   │   │   ├── features/
-│   │   │   │   ├── API/
-│   │   │   │   │   ├── AuthAccountAPI.feature
-│   │   │   │   │   ├── BrandsAPI.feature
-│   │   │   │   │   ├── DataDrivenAPI.feature
-│   │   │   │   │   ├── ProductsAPI.feature
-│   │   │   │   │   └── SecurityResiliencyAPI.feature
-│   │   │   │   └── UI/
-│   │   │   │       ├── Cart.feature
-│   │   │   │       ├── ProductCatalog.feature
-│   │   │   │       └── UserAuthentication.feature
-│   │   │   ├── logback-test.xml
-│   │   │   ├── schemas/
-│   │   │   │   ├── brandSchema.json
-│   │   │   │   ├── cartSchema.json
-│   │   │   │   ├── orderSchema.json
-│   │   │   │   ├── productSchema.json
-│   │   │   │   └── userSchema.json
-│   │   │   ├── testData/
-│   │   │   │   ├── cart.json
-│   │   │   │   ├── orders.json
-│   │   │   │   ├── payments.json
-│   │   │   │   ├── products.json
-│   │   │   │   ├── registration-data.json
-│   │   │   │   └── users.json
-│   │   │   └── testNG.xml
-├── allure-results/ (generated report artifacts)
-├── target/ (build output)
-└── test-output/ (TestNG output)
+│   │   │   └── stepDefinitions/               # Cucumber steps
+│   │   │       ├── APISteps.java
+│   │   │       ├── CartSteps.java
+│   │   │       ├── Hooks.java
+│   │   │       ├── LoginSteps.java
+│   │   │       ├── ProductSteps.java
+│   │   │       └── SignupSteps.java
+│   │   └── resources/
+│   │       ├── extent.properties              # Extent Reports config
+│   │       ├── logback-test.xml               # Logging config
+│   │       ├── testNG.xml                     # TestNG suite
+│   │       ├── features/
+│   │       │   ├── API/
+│   │       │   │   ├── AuthAccountAPI.feature
+│   │       │   │   ├── BrandsAPI.feature
+│   │       │   │   ├── DataDrivenAPI.feature
+│   │       │   │   ├── ProductsAPI.feature
+│   │       │   │   └── SecurityResiliencyAPI.feature
+│   │       │   └── UI/
+│   │       │       ├── Cart.feature
+│   │       │       ├── ProductCatalog.feature
+│   │       │       └── UserAuthentication.feature
+│   │       ├── schemas/                       # JSON schemas
+│   │       │   ├── brandSchema.json
+│   │       │   ├── cartSchema.json
+│   │       │   ├── orderSchema.json
+│   │       │   ├── productSchema.json
+│   │       │   └── userSchema.json
+│   │       └── testData/                      # Test data files
+│   │           ├── cart.json
+│   │           ├── orders.json
+│   │           ├── payments.json
+│   │           ├── products.json
+│   │           ├── registration-data.json
+│   │           └── users.json
+├── recordings/                                # Video recordings (Docker Grid)
+├── allure-results/                            # Allure raw results
+├── target/                                    # Build output
+└── test-output/                               # TestNG output
 ```
 
 ***

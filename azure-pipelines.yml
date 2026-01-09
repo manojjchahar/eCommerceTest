@@ -4,6 +4,9 @@
 # Two-Stage Pipeline with Artifact Passing
 # ============================================
 
+# Run naming: shows trigger type, date, and tags
+name: '$(Date:yyyyMMdd)-$(Rev:r)-$(Build.Reason)-$(Build.SourceBranchName)'
+
 # ============================================
 # PARAMETERS
 # ============================================

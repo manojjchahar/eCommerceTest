@@ -129,12 +129,11 @@ variables:
   allureResultsDir: 'target/allure-results'
 
 steps:
-  - task: JavaToolInstaller@0
-    displayName: 'Install Java $(JAVA_VERSION)'
-    inputs:
-      versionSpec: '$(JAVA_VERSION)'
-      jdkArchitectureOption: 'x64'
-      jdkSourceOption: 'PreInstalled'
+  # Verify Java is available (self-hosted agent has Java pre-installed)
+  - script: |
+      echo "JAVA_HOME=%JAVA_HOME%"
+      java -version
+    displayName: 'Verify Java Installation'
 
   # Cache the local Maven repository to speed up builds
   - task: Cache@2

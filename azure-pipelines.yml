@@ -63,6 +63,15 @@ parameters:
       - 2
       - 3
 
+  - name: executionMode
+    displayName: 'Execution Mode'
+    type: string
+    default: 'local'
+    values:
+      - 'local'   # WebDriverManager - run on agent
+      - 'docker'  # Docker Compose Grid - localhost:4444
+      - 'grid'    # External Grid URL
+
 # ============================================
 # TRIGGERS
 # ============================================
@@ -114,7 +123,14 @@ variables:
   waitShortTimeout: '25'
   waitLongTimeout: '35'
   waitPollingMillis: '750'
-  gridUrl: ''
+  # Grid URL based on execution mode
+  ${{ if eq(parameters.executionMode, 'docker') }}:
+    gridUrl: 'http://localhost:4444'
+  ${{ elseif eq(parameters.executionMode, 'grid') }}:
+    gridUrl: 'http://selenium-grid:4444'  # Override in pipeline run
+  ${{ else }}:
+    gridUrl: ''  # Local - WebDriverManager
+  executionMode: '${{ parameters.executionMode }}'
   retryCount: '${{ parameters.retryCount }}'
   allureReportDir: 'target/site/allure-maven-plugin'
   allureResultsDir: 'target/allure-results'

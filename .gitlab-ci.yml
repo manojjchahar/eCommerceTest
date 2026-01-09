@@ -46,7 +46,14 @@ variables:
   WAIT_LONG_TIMEOUT: "35"
   WAIT_POLLING_MILLIS: "750"
   
-  # Grid Configuration
+  # Execution Mode: local, docker, grid
+  # Override in CI/CD Variables or Pipeline UI
+  EXECUTION_MODE: "local"
+  
+  # Grid Configuration (set based on EXECUTION_MODE)
+  # local = empty (uses WebDriverManager)
+  # docker = http://selenium:4444 (compose service)
+  # grid = custom external URL
   GRID_URL: ""
   
   # Report Directories

@@ -1,0 +1,111 @@
+# ============================================
+# SELENIUM GRID - KUBERNETES HELM VALUES
+# For deploying Selenium Grid on Kubernetes
+# ============================================
+# Usage:
+#   helm repo add selenium https://www.selenium.dev/docker-selenium
+#   helm install selenium-grid selenium/selenium-grid -f selenium-grid-values.yaml
+# ============================================
+
+# Global Settings
+global:
+  seleniumGrid:
+    imageTag: "4.27.0"
+    nodesImageTag: "4.27.0"
+    videoImageTag: "ffmpeg-7.1-20241219"
+
+# Hub Configuration
+hub:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+# Chrome Node
+chromeNode:
+  enabled: true
+  replicas: 2
+  maxSessions: 2
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  extraEnvironmentVariables:
+    - name: SE_VNC_NO_PASSWORD
+      value: "false"
+    - name: SE_VNC_PASSWORD
+      value: "secret"
+    - name: SE_SCREEN_WIDTH
+      value: "1920"
+    - name: SE_SCREEN_HEIGHT
+      value: "1080"
+
+# Firefox Node
+firefoxNode:
+  enabled: true
+  replicas: 1
+  maxSessions: 2
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# Edge Node
+edgeNode:
+  enabled: true
+  replicas: 1
+  maxSessions: 2
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# Video Recording (Optional)
+videoRecorder:
+  enabled: true
+  imageName: selenium/video
+  imageTag: ffmpeg-7.1-20241219
+  uploader:
+    enabled: false
+
+# Ingress (for external access)
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  hostname: selenium-grid.local
+  paths:
+    - path: /
+      pathType: Prefix
+
+# Autoscaling (KEDA)
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  scalingType: "job"
+  scaledOptions:
+    pollingInterval: 20
+    cooldownPeriod: 60
+
+# Persistence for video recordings
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClassName: standard

@@ -1,48 +1,185 @@
-version: "3"
+# ============================================
+# SELENIUM GRID 4 - DOCKER COMPOSE
+# Modern Test Execution Infrastructure
+# ============================================
+# Usage:
+#   Start:    docker-compose up -d --scale chrome=3 --scale firefox=2
+#   Stop:     docker-compose down
+#   Logs:     docker-compose logs -f
+#   Grid UI:  http://localhost:4444/ui
+#   VNC:      vnc://localhost:7900 (password: secret)
+# ============================================
+
 services:
+  # ==========================================
+  # SELENIUM HUB (Grid Router)
+  # ==========================================
   selenium-hub:
-    image: selenium/hub:4.16.1
+    image: selenium/hub:4.27.0
     container_name: selenium-hub
     ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
-    volumes:
-      - ./config.toml:/opt/bin/config.toml
+      - "4442:4442" # Event bus publish
+      - "4443:4443" # Event bus subscribe
+      - "4444:4444" # Grid endpoint
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_SESSION_REQUEST_TIMEOUT=300
+      - SE_SESSION_RETRY_INTERVAL=5
+      - SE_NODE_MAX_SESSIONS=5
+      - SE_LOG_LEVEL=INFO
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - selenium-grid
 
+  # ==========================================
+  # CHROME NODE (with VNC & Video)
+  # ==========================================
   chrome:
-    image: selenium/node-chrome:4.16.1
+    image: selenium/node-chrome:4.27.0
     shm_size: 2gb
     depends_on:
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
       - SE_NODE_MAX_SESSIONS=2
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_VNC_NO_PASSWORD=false
+      - SE_VNC_PASSWORD=secret
+      - SE_SCREEN_WIDTH=1920
+      - SE_SCREEN_HEIGHT=1080
+      - SE_SCREEN_DEPTH=24
+    ports:
+      - "7900:7900" # noVNC web access
+      - "5900:5900" # VNC client access
+    volumes:
+      - /dev/shm:/dev/shm
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+    networks:
+      - selenium-grid
 
+  # Chrome Video Recorder
+  chrome-video:
+    image: selenium/video:ffmpeg-7.1-20241219
+    depends_on:
+      - chrome
+    environment:
+      - DISPLAY_CONTAINER_NAME=chrome
+      - SE_VIDEO_FILE_NAME=chrome_video
+      - SE_VIDEO_UPLOAD_ENABLED=false
+    volumes:
+      - ./recordings:/videos
+    networks:
+      - selenium-grid
+
+  # ==========================================
+  # FIREFOX NODE (with VNC & Video)
+  # ==========================================
   firefox:
-    image: selenium/node-firefox:4.16.1
+    image: selenium/node-firefox:4.27.0
     shm_size: 2gb
     depends_on:
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
       - SE_NODE_MAX_SESSIONS=2
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_VNC_NO_PASSWORD=false
+      - SE_VNC_PASSWORD=secret
+      - SE_SCREEN_WIDTH=1920
+      - SE_SCREEN_HEIGHT=1080
+    ports:
+      - "7901:7900" # noVNC (different port)
+      - "5901:5900" # VNC
+    volumes:
+      - /dev/shm:/dev/shm
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+    networks:
+      - selenium-grid
 
+  # Firefox Video Recorder
+  firefox-video:
+    image: selenium/video:ffmpeg-7.1-20241219
+    depends_on:
+      - firefox
+    environment:
+      - DISPLAY_CONTAINER_NAME=firefox
+      - SE_VIDEO_FILE_NAME=firefox_video
+    volumes:
+      - ./recordings:/videos
+    networks:
+      - selenium-grid
+
+  # ==========================================
+  # EDGE NODE (with VNC & Video)
+  # ==========================================
   edge:
-    image: selenium/node-edge:4.16.1
+    image: selenium/node-edge:4.27.0
     shm_size: 2gb
     depends_on:
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
       - SE_NODE_MAX_SESSIONS=2
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_VNC_NO_PASSWORD=false
+      - SE_VNC_PASSWORD=secret
+      - SE_SCREEN_WIDTH=1920
+      - SE_SCREEN_HEIGHT=1080
+    ports:
+      - "7902:7900" # noVNC
+      - "5902:5900" # VNC
+    volumes:
+      - /dev/shm:/dev/shm
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+    networks:
+      - selenium-grid
+
+  # Edge Video Recorder
+  edge-video:
+    image: selenium/video:ffmpeg-7.1-20241219
+    depends_on:
+      - edge
+    environment:
+      - DISPLAY_CONTAINER_NAME=edge
+      - SE_VIDEO_FILE_NAME=edge_video
+    volumes:
+      - ./recordings:/videos
+    networks:
+      - selenium-grid
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  selenium-grid:
+    driver: bridge

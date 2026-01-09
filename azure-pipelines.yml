@@ -1,4 +1,9 @@
 # ============================================
+# AZURE DEVOPS MULTI-STAGE PIPELINE
+# E-Commerce Test Automation Framework
+# ============================================
+
+# ============================================
 # ON-DEMAND PARAMETERS (for manual/scheduled runs)
 # ============================================
 parameters:
@@ -78,44 +83,38 @@ pr:
 # Scheduled Triggers - Nightly and Weekly
 schedules:
   # Nightly run - Every weekday at 2:00 AM IST (8:30 PM UTC previous day)
-  # Runs BOTH UI and API tests
   - cron: '30 20 * * 0-4'
     displayName: 'Nightly Full Tests (Mon-Fri 2:00 AM IST)'
     branches:
       include:
         - main
         - master
-    always: false  # Only run if there are changes
+    always: false
     batch: true
 
-  # Weekly Full Suite - Every Saturday at 3:00 AM IST (9:30 PM UTC Friday)
+  # Weekly Full Suite - Every Saturday at 3:00 AM IST
   - cron: '30 21 * * 5'
     displayName: 'Weekly Full Suite (Sat 3:00 AM IST)'
     branches:
       include:
         - main
         - master
-    always: true  # Run even if no changes
+    always: true
     batch: true
 
 # ============================================
-# POOL & VARIABLES
+# GLOBAL VARIABLES
 # ============================================
-pool:
-  name: 'Default'
-
 variables:
   MAVEN_OPTS: '-Xmx1024m'
   JAVA_VERSION: '21'
   MAVEN_GOALS: 'clean verify'
-  # Use parameter values if manually triggered, otherwise use defaults
+  # Conditional tags based on trigger type
   ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
-    # All scheduled runs use @eCommFull (full suite - both UI and API)
     cucumberTags: '@eCommFull'
   ${{ elseif eq(variables['Build.Reason'], 'Manual') }}:
     cucumberTags: '${{ parameters.cucumberTags }}'
   ${{ else }}:
-    # CI/PR triggers run UI tests only (faster feedback)
     cucumberTags: '@UI'
   browser: '${{ parameters.browser }}'
   dataproviderthreadcount: '${{ parameters.parallelThreads }}'
@@ -123,76 +122,209 @@ variables:
   waitShortTimeout: '25'
   waitLongTimeout: '35'
   waitPollingMillis: '750'
-  gridUrl: '' # set to your Grid hub URL to enable remote execution
+  gridUrl: ''
   retryCount: '${{ parameters.retryCount }}'
   allureReportDir: 'target/site/allure-maven-plugin'
   allureResultsDir: 'target/allure-results'
 
-steps:
-  # Verify Java is available (self-hosted agent has Java pre-installed)
-  - script: |
-      echo "JAVA_HOME=%JAVA_HOME%"
-      java -version
-    displayName: 'Verify Java Installation'
+# ============================================
+# STAGES
+# ============================================
+stages:
+  # ==========================================
+  # STAGE 1: BUILD
+  # ==========================================
+  - stage: Build
+    displayName: '🔨 Build & Setup'
+    jobs:
+      - job: BuildJob
+        displayName: 'Compile & Cache Dependencies'
+        pool:
+          name: 'Default'
+        steps:
+          # Verify Java installation
+          - script: |
+              echo "=== Java Environment ==="
+              echo "JAVA_HOME=%JAVA_HOME%"
+              java -version
+              echo.
+              echo "=== Maven Environment ==="
+              mvn -version
+            displayName: '☕ Verify Java & Maven'
 
-  # Cache the local Maven repository to speed up builds
-  - task: Cache@2
-    inputs:
-      key: 'maven | "$(Agent.OS)" | **/pom.xml'
-      restoreKeys: |
-        maven | "$(Agent.OS)"
-      path: '$(UserProfile)\/.m2\/repository'
+          # Cache Maven dependencies
+          - task: Cache@2
+            displayName: '📦 Cache Maven Repository'
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+              path: '$(UserProfile)/.m2/repository'
 
-  # Run Maven tests using script (avoids capability demands for self-hosted agents)
-  - script: |
-      mvn $(MAVEN_GOALS) ^
-        -Dtest=ParallelTestRunner ^
-        -Dcucumber.filter.tags="$(cucumberTags)" ^
-        -Dbrowser=$(browser) ^
-        -Ddataproviderthreadcount=$(dataproviderthreadcount) ^
-        -Dheadless=$(headless) ^
-        -Dwait.short.timeout=$(waitShortTimeout) ^
-        -Dwait.long.timeout=$(waitLongTimeout) ^
-        -Dwait.polling.millis=$(waitPollingMillis) ^
-        -DgridUrl=$(gridUrl) ^
-        -Dretry.count=$(retryCount) ^
-        -Dsurefire.rerunFailingTestsCount=$(retryCount) ^
-        -Dallure.results.directory=$(allureResultsDir)
-    displayName: 'Run Maven Tests'
-    env:
-      MAVEN_OPTS: '$(MAVEN_OPTS)'
+          # Compile project (no tests)
+          - script: mvn compile -DskipTests -B
+            displayName: '🔨 Compile Project'
+            env:
+              MAVEN_OPTS: '$(MAVEN_OPTS)'
 
-  # Publish JUnit test results
-  - task: PublishTestResults@2
-    displayName: 'Publish JUnit Test Results'
-    condition: always()
-    inputs:
-      testResultsFormat: 'JUnit'
-      testResultsFiles: '**/surefire-reports/*.xml'
-      failTaskOnFailedTests: true
+  # ==========================================
+  # STAGE 2: TEST
+  # ==========================================
+  - stage: Test
+    displayName: '🧪 Run Tests'
+    dependsOn: Build
+    jobs:
+      - job: TestJob
+        displayName: 'Execute Cucumber Tests'
+        pool:
+          name: 'Default'
+        steps:
+          # Restore Maven cache
+          - task: Cache@2
+            displayName: '📦 Restore Maven Cache'
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+              path: '$(UserProfile)/.m2/repository'
 
-  - script: mvn allure:report -DskipTests
-    displayName: 'Generate Allure Report'
+          # Run tests
+          - script: |
+              echo "=== Test Configuration ==="
+              echo "Tags: $(cucumberTags)"
+              echo "Browser: $(browser)"
+              echo "Headless: $(headless)"
+              echo "Threads: $(dataproviderthreadcount)"
+              echo "Retry Count: $(retryCount)"
+              echo "=========================="
+              echo.
+              mvn $(MAVEN_GOALS) ^
+                -Dtest=ParallelTestRunner ^
+                -Dcucumber.filter.tags="$(cucumberTags)" ^
+                -Dbrowser=$(browser) ^
+                -Ddataproviderthreadcount=$(dataproviderthreadcount) ^
+                -Dheadless=$(headless) ^
+                -Dwait.short.timeout=$(waitShortTimeout) ^
+                -Dwait.long.timeout=$(waitLongTimeout) ^
+                -Dwait.polling.millis=$(waitPollingMillis) ^
+                -DgridUrl=$(gridUrl) ^
+                -Dretry.count=$(retryCount) ^
+                -Dsurefire.rerunFailingTestsCount=$(retryCount) ^
+                -Dallure.results.directory=$(allureResultsDir) ^
+                -B
+            displayName: '🧪 Run Maven Tests'
+            env:
+              MAVEN_OPTS: '$(MAVEN_OPTS)'
+            continueOnError: true  # Continue to publish results even if tests fail
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Cucumber, Extent, Allure results'
-    inputs:
-      PathtoPublish: 'target'
-      ArtifactName: 'reports'
-      publishLocation: 'Container'
+          # Publish JUnit test results (ALWAYS runs)
+          - task: PublishTestResults@2
+            displayName: '📊 Publish JUnit Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              mergeTestResults: true
+              failTaskOnFailedTests: false  # Don't fail the task, let the stage show test status
+              testRunTitle: 'Cucumber Tests - $(cucumberTags)'
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Allure Report (HTML)'
-    condition: succeeded()
-    inputs:
-      PathtoPublish: '$(allureReportDir)'
-      ArtifactName: 'allure-report'
-      publishLocation: 'Container'
+          # Publish test artifacts for next stage
+          - task: PublishPipelineArtifact@1
+            displayName: '📤 Upload Test Artifacts'
+            condition: always()
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/target'
+              artifact: 'test-results'
+              publishLocation: 'pipeline'
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Allure Raw Results'
-    condition: succeeded()
-    inputs:
-      PathtoPublish: '$(allureResultsDir)'
-      ArtifactName: 'allure-results'
-      publishLocation: 'Container'
+  # ==========================================
+  # STAGE 3: REPORT
+  # ==========================================
+  - stage: Report
+    displayName: '📈 Generate Reports'
+    dependsOn: Test
+    condition: succeededOrFailed()  # Run even if tests failed
+    jobs:
+      - job: ReportJob
+        displayName: 'Generate & Publish Reports'
+        pool:
+          name: 'Default'
+        steps:
+          # Download test artifacts from previous stage
+          - task: DownloadPipelineArtifact@2
+            displayName: '📥 Download Test Results'
+            inputs:
+              artifact: 'test-results'
+              path: '$(System.DefaultWorkingDirectory)/target'
+
+          # Restore Maven cache for Allure plugin
+          - task: Cache@2
+            displayName: '📦 Restore Maven Cache'
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+              path: '$(UserProfile)/.m2/repository'
+
+          # Generate Allure Report
+          - script: mvn allure:report -DskipTests -B
+            displayName: '📊 Generate Allure Report'
+            continueOnError: true
+
+          # Publish Cucumber & Extent Reports
+          - task: PublishBuildArtifacts@1
+            displayName: '📁 Publish Cucumber Reports'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/target/cucumber-reports'
+              ArtifactName: 'cucumber-reports'
+              publishLocation: 'Container'
+            continueOnError: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: '📁 Publish Extent Reports'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/target/extent-reports'
+              ArtifactName: 'extent-reports'
+              publishLocation: 'Container'
+            continueOnError: true
+
+          # Publish Allure HTML Report
+          - task: PublishBuildArtifacts@1
+            displayName: '📊 Publish Allure HTML Report'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(allureReportDir)'
+              ArtifactName: 'allure-report'
+              publishLocation: 'Container'
+            continueOnError: true
+
+          # Publish Allure Raw Results (for history)
+          - task: PublishBuildArtifacts@1
+            displayName: '📊 Publish Allure Results'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(allureResultsDir)'
+              ArtifactName: 'allure-results'
+              publishLocation: 'Container'
+            continueOnError: true
+
+          # Pipeline Summary
+          - script: |
+              echo.
+              echo ========================================
+              echo   PIPELINE EXECUTION COMPLETE
+              echo ========================================
+              echo Tags Executed: $(cucumberTags)
+              echo Browser: $(browser)
+              echo Headless: $(headless)
+              echo ========================================
+              echo.
+              echo Check the following artifacts:
+              echo   - cucumber-reports
+              echo   - extent-reports
+              echo   - allure-report
+              echo   - allure-results
+              echo ========================================
+            displayName: '✅ Pipeline Summary'

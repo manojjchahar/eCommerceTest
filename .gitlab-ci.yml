@@ -23,8 +23,7 @@ workflow:
 # ============================================
 default:
   image: maven:3.9-eclipse-temurin-21
-  tags:
-    - docker
+  # Note: Removed 'tags: docker' - GitLab.com shared runners work without tags
 
 # ============================================
 # VARIABLES (with on-demand overrides)

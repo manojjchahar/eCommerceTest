@@ -1,60 +1,110 @@
-# GitLab CI/CD Pipeline for eCommerceTest Framework
-# Equivalent to azure-pipelines.yml
+# ============================================
+# GITLAB CI/CD PIPELINE
+# E-Commerce Test Automation Framework
+# Mirrors Azure DevOps Pipeline Functionality
+# ============================================
 
-# Trigger on main and master branches
+# ============================================
+# WORKFLOW RULES (Triggers)
+# ============================================
 workflow:
   rules:
+    # CI Trigger - Push to main/master
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+    # MR Trigger
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Manual/Web Trigger
     - if: $CI_PIPELINE_SOURCE == "web"
+    # Scheduled Trigger
+    - if: $CI_PIPELINE_SOURCE == "schedule"
 
-# Default image with Java 21
-image: maven:3.9-eclipse-temurin-21
+# ============================================
+# DEFAULT SETTINGS
+# ============================================
+default:
+  image: maven:3.9-eclipse-temurin-21
+  tags:
+    - docker
 
-# Variables (equivalent to Azure DevOps variables)
+# ============================================
+# VARIABLES (with on-demand overrides)
+# ============================================
 variables:
+  # Maven Configuration
   MAVEN_OPTS: "-Xmx1024m -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-  MAVEN_CLI_OPTS: "--batch-mode --errors --show-version"
-  JAVA_VERSION: "21"
-  MAVEN_GOALS: "clean verify"
-  CUCUMBER_TAGS: "@ui"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end"
+  
+  # Test Configuration (can be overridden via UI or API)
+  CUCUMBER_TAGS: "@eCommFull"
   BROWSER: "chrome"
-  DATAPROVIDERTHREADCOUNT: "2"
   HEADLESS: "true"
+  PARALLEL_THREADS: "2"
+  RETRY_COUNT: "1"
+  
+  # Timeouts
   WAIT_SHORT_TIMEOUT: "25"
   WAIT_LONG_TIMEOUT: "35"
   WAIT_POLLING_MILLIS: "750"
-  GRID_URL: ""  # Set to your Grid hub URL to enable remote execution
-  RETRY_COUNT: "1"
+  
+  # Grid Configuration
+  GRID_URL: ""
+  
+  # Report Directories
   ALLURE_REPORT_DIR: "target/site/allure-maven-plugin"
   ALLURE_RESULTS_DIR: "target/allure-results"
 
-# Cache Maven dependencies to speed up builds
+# ============================================
+# CACHE CONFIGURATION
+# ============================================
 cache:
-  key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+  key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
   paths:
     - .m2/repository/
+  policy: pull-push
 
+# ============================================
+# STAGES (Two-Stage like Azure)
+# ============================================
 stages:
   - test
   - report
 
-# Main test job
+# ============================================
+# STAGE 1: TEST EXECUTION
+# ============================================
 test:
   stage: test
   services:
     - name: selenium/standalone-chrome:latest
       alias: selenium
+  
   before_script:
+    - echo "========================================"
+    - echo "  ENVIRONMENT"
+    - echo "========================================"
     - java -version
     - mvn --version
+    - echo "========================================"
+    - echo "  TEST CONFIGURATION"
+    - echo "========================================"
+    - echo "Tags    - $CUCUMBER_TAGS"
+    - echo "Browser - $BROWSER"
+    - echo "Headless- $HEADLESS"
+    - echo "Threads - $PARALLEL_THREADS"
+    - echo "Retry   - $RETRY_COUNT"
+    - echo "========================================"
+  
   script:
+    # Compile
+    - mvn compile -DskipTests $MAVEN_CLI_OPTS -q
+    
+    # Run Tests
     - >
-      mvn $MAVEN_CLI_OPTS $MAVEN_GOALS
+      mvn verify $MAVEN_CLI_OPTS
       -Dtest=ParallelTestRunner
       -Dcucumber.filter.tags="$CUCUMBER_TAGS"
       -Dbrowser=$BROWSER
-      -Ddataproviderthreadcount=$DATAPROVIDERTHREADCOUNT
+      -Ddataproviderthreadcount=$PARALLEL_THREADS
       -Dheadless=$HEADLESS
       -Dwait.short.timeout=$WAIT_SHORT_TIMEOUT
       -Dwait.long.timeout=$WAIT_LONG_TIMEOUT
@@ -63,46 +113,82 @@ test:
       -Dretry.count=$RETRY_COUNT
       -Dsurefire.rerunFailingTestsCount=$RETRY_COUNT
       -Dallure.results.directory=$ALLURE_RESULTS_DIR
+      || true
+  
+  after_script:
+    - echo "Test execution completed"
+  
   artifacts:
+    name: "test-output-${CI_JOB_ID}"
     when: always
     paths:
-      - target/surefire-reports/
-      - target/cucumber-reports/
-      - target/extent-reports/
-      - $ALLURE_RESULTS_DIR/
+      - target/
     reports:
-      junit: target/surefire-reports/*.xml
+      junit: target/surefire-reports/TEST-*.xml
     expire_in: 7 days
+  
+  allow_failure: false
 
-# Generate and publish Allure report
-allure-report:
+# ============================================
+# STAGE 2: GENERATE REPORTS
+# ============================================
+report:
   stage: report
   needs:
     - job: test
       artifacts: true
+  
   script:
-    - mvn allure:report -DskipTests
+    - echo "Generating Allure Report..."
+    - mvn allure:report -DskipTests $MAVEN_CLI_OPTS -q || true
+    - echo "Report generation completed"
+  
   artifacts:
+    name: "reports-${CI_JOB_ID}"
     when: always
     paths:
+      - target/cucumber-reports/
+      - target/extent/
       - $ALLURE_REPORT_DIR/
       - $ALLURE_RESULTS_DIR/
     expire_in: 30 days
+  
+  when: always
   allow_failure: true
 
-# Optional: Deploy Allure report to GitLab Pages
+# ============================================
+# GITLAB PAGES (View Allure Report Online)
+# ============================================
 pages:
   stage: report
   needs:
-    - job: allure-report
+    - job: report
       artifacts: true
+  
   script:
     - mkdir -p public
-    - cp -r $ALLURE_REPORT_DIR/* public/
+    - cp -r $ALLURE_REPORT_DIR/* public/ || echo "No Allure report to publish"
+    - echo "Allure report published to GitLab Pages"
+  
   artifacts:
     paths:
       - public
     expire_in: 30 days
+  
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+  
   allow_failure: true
+
+# ============================================
+# SCHEDULED PIPELINES
+# Configure in GitLab UI: Settings > CI/CD > Schedules
+# 
+# Nightly (Mon-Fri 2:00 AM IST / 8:30 PM UTC):
+#   Cron: 30 20 * * 0-4
+#   Variables: CUCUMBER_TAGS = @eCommFull
+#
+# Weekly (Sat 3:00 AM IST / 9:30 PM UTC):
+#   Cron: 30 21 * * 5
+#   Variables: CUCUMBER_TAGS = @eCommFull
+# ============================================

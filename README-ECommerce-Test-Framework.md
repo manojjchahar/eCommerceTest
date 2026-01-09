@@ -1,14 +1,17 @@
 # ECommerceFullTestFramework
 
-[![GitHub issues](https://img.shields.io/github/issues/manojjchahar/ECommerceFullTestFramework)](https://github.com/manojjchahar)
-
+[![Azure DevOps](https://img.shields.io/badge/Azure%20DevOps-Pipeline-0078D7?logo=azure-devops)](https://dev.azure.com/manojchahar/E%20Commerce%20Test%20Automation)
+[![GitLab CI](https://img.shields.io/badge/GitLab-CI%2FCD-FC6D26?logo=gitlab)](https://gitlab.com/mxk2/eCommerceTest)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/manojjchahar/eCommerceTest)
 
 [![Java](https://img.shields.io/badge/Java-21-blue.svg)](https://www.oracle.com/java/)
 [![Maven](https://img.shields.io/badge/Maven-3.8+-red.svg)](https://maven.apache.org/)
 [![TestNG](https://img.shields.io/badge/TestNG-7.8.0-orange.svg)](https://testng.org/)
 [![Cucumber](https://img.shields.io/badge/Cucumber-7.15.0-green.svg)](https://cucumber.io/)
 [![Rest Assured](https://img.shields.io/badge/RestAssured-5.3.2-purple.svg)](https://rest-assured.io/)
-[![Selenium](https://img.shields.io/badge/Selenium-4.16.1-yellow.svg)](https://selenium.dev/)
+[![Selenium](https://img.shields.io/badge/Selenium-4.27.0-yellow.svg)](https://selenium.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://docs.docker.com/compose/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-326CE5?logo=kubernetes)](https://kubernetes.io/)
 
 ***
 
@@ -64,11 +67,139 @@ The goal is to deliver portfolio-level, industry-standard automation that is eas
 - JDK 21 installed & JAVA_HOME set
 - Maven 3.8+ installed
 - Chrome (primary) or Edge browser installed
+- Docker (optional, for Selenium Grid)
 
 Verify setup:
 ```bash
 java -version
 mvn -v
+docker --version  # optional
+```
+
+***
+
+## 🔄 CI/CD Pipelines
+
+This framework is configured for **multi-platform CI/CD** with identical functionality across:
+
+| Platform | Config File | Status |
+|----------|-------------|--------|
+| **Azure DevOps** | `azure-pipelines.yml` | ✅ Two-stage pipeline |
+| **GitLab CI** | `.gitlab-ci.yml` | ✅ Two-stage pipeline |
+| **GitHub** | (manual runs) | ✅ Repository synced |
+
+### Pipeline Features
+
+| Feature | Description |
+|---------|-------------|
+| **On-Demand Parameters** | Select tags, browser, threads, retry count from UI |
+| **Scheduled Triggers** | Nightly (Mon-Fri 2AM) + Weekly (Sat 3AM) |
+| **Execution Modes** | local / docker / grid |
+| **Artifact Publishing** | JUnit results, Cucumber, Extent, Allure reports |
+| **Two Stages** | TestExecution → Reports |
+
+### Running Pipelines
+
+**Azure DevOps:**
+```
+https://dev.azure.com/manojchahar/E%20Commerce%20Test%20Automation/_build
+```
+
+**GitLab CI:**
+```
+https://gitlab.com/mxk2/eCommerceTest/-/pipelines
+```
+
+### Execution Modes
+
+| Mode | gridUrl | What It Does |
+|------|---------|--------------|
+| `local` | (empty) | WebDriverManager - runs browser on agent |
+| `docker` | localhost:4444 | Docker Compose Selenium Grid |
+| `grid` | custom URL | External Kubernetes/Cloud Grid |
+
+***
+
+## 🐳 Selenium Grid (Docker)
+
+Modern Selenium Grid 4.27 with video recording, VNC access, and auto-scaling.
+
+### Quick Start
+```bash
+# Start Grid (scales Chrome to 3 instances)
+docker-compose up -d --scale chrome=3
+
+# View Grid UI
+open http://localhost:4444/ui
+
+# VNC to watch tests live (password: secret)
+open vnc://localhost:7900
+
+# Run tests against Grid
+mvn verify -DgridUrl=http://localhost:4444
+
+# View video recordings
+ls ./recordings/
+
+# Stop Grid
+docker-compose down
+```
+
+### Docker Compose Services
+
+| Service | Ports | Purpose |
+|---------|-------|---------|
+| selenium-hub | 4444 | Grid endpoint |
+| chrome | 7900 (VNC), 5900 | Chrome browser node |
+| firefox | 7901, 5901 | Firefox browser node |
+| edge | 7902, 5902 | Edge browser node |
+| *-video | - | Records test execution to `./recordings/` |
+
+***
+
+## ☸️ Kubernetes Deployment
+
+For enterprise-scale parallel execution, deploy Selenium Grid on Kubernetes using Helm.
+
+### Files
+- `infrastructure/k8s/selenium-grid-values.yaml` - Helm values
+- `infrastructure/k8s/README.md` - Deployment guide
+
+### Quick Deploy
+```bash
+# Add Selenium Helm repo
+helm repo add selenium https://www.selenium.dev/docker-selenium
+helm repo update
+
+# Deploy Grid
+helm install selenium-grid selenium/selenium-grid \
+  -f infrastructure/k8s/selenium-grid-values.yaml \
+  --namespace selenium --create-namespace
+
+# Port forward to access
+kubectl port-forward svc/selenium-grid-hub 4444:4444 -n selenium
+
+# Run tests
+mvn verify -DgridUrl=http://localhost:4444
+```
+
+***
+
+## 📦 Multi-Repository Setup
+
+The framework is synchronized across three Git platforms:
+
+```bash
+# View all remotes
+git remote -v
+
+# Push to ALL remotes at once
+git push all <branch>
+
+# Push to individual remotes
+git push origin <branch>  # Azure DevOps
+git push gitlab <branch>  # GitLab
+git push github <branch>  # GitHub
 ```
 
 ***
@@ -274,11 +405,17 @@ Combine with logical expressions: `-Dcucumber.filter.tags="@API and not @negativ
 
 ***
 ## 🗓 Recent Changes
-- 2025-11: Added resiliency/rate-limit feature set & retry strategies.
-- 2025-11: Upgraded to Java 21 toolchain & aligned plugins.
-- 2025-11: Integrated Allure adapters (results present under allure-results/).
-- 2025-11: Refactoring: consolidated utilities (BrowserManager, DataRepository, RetryPolicy, SchemaValidationReport).
-- 2025-11: Removed legacy util classes: DriverFactory, WaitFactory, JSONUtils, TestDataLoader, FixedDelayRetryStrategy, ExponentialBackoffRetryStrategy.
+- **2026-01**: Added multi-platform CI/CD pipelines (Azure DevOps + GitLab CI)
+- **2026-01**: Upgraded Selenium Grid to 4.27 with video recording & VNC access
+- **2026-01**: Added Kubernetes Helm deployment support (`infrastructure/k8s/`)
+- **2026-01**: Added execution mode parameter (local/docker/grid)
+- **2026-01**: Multi-repository setup (Azure DevOps, GitLab, GitHub)
+- **2026-01**: On-demand pipeline parameters & scheduled triggers
+- 2025-11: Added resiliency/rate-limit feature set & retry strategies
+- 2025-11: Upgraded to Java 21 toolchain & aligned plugins
+- 2025-11: Integrated Allure adapters (results present under allure-results/)
+- 2025-11: Refactoring: consolidated utilities (BrowserManager, DataRepository, RetryPolicy, SchemaValidationReport)
+- 2025-11: Removed legacy util classes: DriverFactory, WaitFactory, JSONUtils, TestDataLoader, FixedDelayRetryStrategy, ExponentialBackoffRetryStrategy
 
 ## ♻ Refactoring & Consolidated Utilities (Updated)
 Unified components now:

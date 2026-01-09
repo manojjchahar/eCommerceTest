@@ -256,7 +256,7 @@ stages:
             condition: always()
             continueOnError: true
             inputs:
-              PathtoPublish: 'target/extent-reports'
+              PathtoPublish: 'target/extent'
               ArtifactName: 'extent-reports'
 
           - task: PublishBuildArtifacts@1

@@ -1,10 +1,11 @@
 # ============================================
 # AZURE DEVOPS PIPELINE
 # E-Commerce Test Automation Framework
+# Two-Stage Pipeline with Artifact Passing
 # ============================================
 
 # ============================================
-# ON-DEMAND PARAMETERS
+# PARAMETERS
 # ============================================
 parameters:
   - name: cucumberTags
@@ -101,7 +102,6 @@ schedules:
 # ============================================
 variables:
   MAVEN_OPTS: '-Xmx1024m'
-  JAVA_VERSION: '21'
   ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
     cucumberTags: '@eCommFull'
   ${{ elseif eq(variables['Build.Reason'], 'Manual') }}:
@@ -124,56 +124,51 @@ variables:
 # ============================================
 stages:
   # ==========================================
-  # STAGE: TEST EXECUTION
+  # STAGE 1: TEST EXECUTION
   # ==========================================
   - stage: TestExecution
     displayName: '🧪 Test Execution'
     jobs:
       - job: RunTests
-        displayName: 'Run Cucumber Tests'
+        displayName: 'Build & Run Tests'
         pool:
           name: 'Default'
         steps:
-          # ---- SETUP ----
+          # Setup
           - script: |
               echo ========================================
-              echo   ENVIRONMENT CHECK
+              echo   ENVIRONMENT
               echo ========================================
               echo JAVA_HOME=%JAVA_HOME%
               java -version
-              echo.
               mvn -version
               echo ========================================
-            displayName: '☕ Verify Java & Maven'
+            displayName: '☕ Verify Environment'
 
-          # Cache (non-blocking)
           - task: Cache@2
-            displayName: '📦 Cache Maven Dependencies'
+            displayName: '📦 Cache Dependencies'
             continueOnError: true
             inputs:
               key: 'maven | "$(Agent.OS)" | **/pom.xml'
-              restoreKeys: |
-                maven | "$(Agent.OS)"
+              restoreKeys: maven | "$(Agent.OS)"
               path: '$(UserProfile)/.m2/repository'
 
-          # ---- BUILD ----
+          # Build
           - script: mvn compile -DskipTests -B -q
-            displayName: '🔨 Compile Project'
+            displayName: '🔨 Compile'
             env:
               MAVEN_OPTS: '$(MAVEN_OPTS)'
 
-          # ---- TEST ----
+          # Test
           - script: |
               echo ========================================
-              echo   TEST CONFIGURATION
+              echo   TEST CONFIG
               echo ========================================
               echo Tags: $(cucumberTags)
               echo Browser: $(browser)
               echo Headless: $(headless)
               echo Threads: $(dataproviderthreadcount)
-              echo Retry: $(retryCount)
               echo ========================================
-              echo.
               mvn verify ^
                 -Dtest=ParallelTestRunner ^
                 -Dcucumber.filter.tags="$(cucumberTags)" ^
@@ -189,11 +184,11 @@ stages:
                 -Dallure.results.directory=$(allureResultsDir) ^
                 -B
             displayName: '🧪 Run Tests'
+            continueOnError: true
             env:
               MAVEN_OPTS: '$(MAVEN_OPTS)'
-            continueOnError: true
 
-          # ---- PUBLISH TEST RESULTS ----
+          # Publish JUnit Results
           - task: PublishTestResults@2
             displayName: '📊 Publish Test Results'
             condition: always()
@@ -202,10 +197,19 @@ stages:
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
               mergeTestResults: true
               failTaskOnFailedTests: false
-              testRunTitle: 'Cucumber - $(cucumberTags) - $(browser)'
+              testRunTitle: '$(cucumberTags) - $(browser)'
+
+          # Upload target folder as pipeline artifact for next stage
+          - task: PublishPipelineArtifact@1
+            displayName: '📤 Upload Test Artifacts'
+            condition: always()
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/target'
+              artifact: 'test-output'
+              publishLocation: 'pipeline'
 
   # ==========================================
-  # STAGE: REPORTS
+  # STAGE 2: GENERATE REPORTS
   # ==========================================
   - stage: Reports
     displayName: '📈 Generate Reports'
@@ -217,14 +221,28 @@ stages:
         pool:
           name: 'Default'
         steps:
+          # Download artifacts from previous stage
+          - task: DownloadPipelineArtifact@2
+            displayName: '📥 Download Test Artifacts'
+            inputs:
+              artifact: 'test-output'
+              path: '$(System.DefaultWorkingDirectory)/target'
+
+          # Restore Maven cache for Allure plugin
+          - task: Cache@2
+            displayName: '� Restore Maven Cache'
+            continueOnError: true
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: maven | "$(Agent.OS)"
+              path: '$(UserProfile)/.m2/repository'
+
           # Generate Allure Report
-          - script: |
-              echo Generating Allure Report...
-              mvn allure:report -DskipTests -B -q
+          - script: mvn allure:report -DskipTests -B -q
             displayName: '📊 Generate Allure Report'
             continueOnError: true
 
-          # Publish Cucumber Reports
+          # Publish Reports
           - task: PublishBuildArtifacts@1
             displayName: '📁 Publish Cucumber Reports'
             condition: always()
@@ -232,9 +250,7 @@ stages:
             inputs:
               PathtoPublish: 'target/cucumber-reports'
               ArtifactName: 'cucumber-reports'
-              publishLocation: 'Container'
 
-          # Publish Extent Reports
           - task: PublishBuildArtifacts@1
             displayName: '📁 Publish Extent Reports'
             condition: always()
@@ -242,9 +258,7 @@ stages:
             inputs:
               PathtoPublish: 'target/extent-reports'
               ArtifactName: 'extent-reports'
-              publishLocation: 'Container'
 
-          # Publish Allure HTML Report
           - task: PublishBuildArtifacts@1
             displayName: '📊 Publish Allure Report'
             condition: always()
@@ -252,9 +266,7 @@ stages:
             inputs:
               PathtoPublish: '$(allureReportDir)'
               ArtifactName: 'allure-report'
-              publishLocation: 'Container'
 
-          # Publish Allure Results
           - task: PublishBuildArtifacts@1
             displayName: '📊 Publish Allure Results'
             condition: always()
@@ -262,7 +274,6 @@ stages:
             inputs:
               PathtoPublish: '$(allureResultsDir)'
               ArtifactName: 'allure-results'
-              publishLocation: 'Container'
 
           # Summary
           - script: |
@@ -273,9 +284,9 @@ stages:
               echo Tags: $(cucumberTags)
               echo Browser: $(browser)
               echo.
-              echo Artifacts Published:
+              echo Published Artifacts:
               echo   - cucumber-reports
-              echo   - extent-reports  
+              echo   - extent-reports
               echo   - allure-report
               echo   - allure-results
               echo ========================================

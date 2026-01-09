@@ -8,6 +8,8 @@
 # WORKFLOW RULES (Triggers)
 # ============================================
 workflow:
+  # Pipeline naming: shows trigger source and branch (GitLab 16.8+)
+  name: '$CI_PIPELINE_SOURCE - $CI_COMMIT_REF_NAME - $CUCUMBER_TAGS'
   rules:
     # CI Trigger - Push to main/master
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
@@ -85,6 +87,13 @@ test:
       alias: selenium
   
   before_script:
+    - echo "========================================"
+    - echo "  PIPELINE TRIGGER INFO"
+    - echo "========================================"
+    - echo "Source  - $CI_PIPELINE_SOURCE"
+    - echo "Branch  - $CI_COMMIT_REF_NAME"
+    - echo "Commit  - $CI_COMMIT_SHORT_SHA"
+    - echo "Pipeline- $CI_PIPELINE_ID"
     - echo "========================================"
     - echo "  ENVIRONMENT"
     - echo "========================================"

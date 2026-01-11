@@ -150,10 +150,16 @@ test:local:
     - echo "========================================"
     - echo "  LOCAL MODE - Self-hosted Windows Runner"
     - echo "========================================"
-    - echo "Using WebDriverManager with local Chrome"
-    - Write-Host "Java Version:" ; java -version
-    - Write-Host "Maven Version:" ; mvn --version
-    - Write-Host "Chrome Version:" ; (Get-Item "C:\Program Files\Google\Chrome\Application\chrome.exe").VersionInfo.FileVersion
+    - echo "Selected Browser: $env:BROWSER"
+    - echo "Using WebDriverManager to auto-download driver"
+    - Write-Host "Java:" ; java -version
+    - Write-Host "Maven:" ; mvn --version
+    - echo "========================================"
+    - echo "Installed Browsers:"
+    - if (Test-Path "C:\Program Files\Google\Chrome\Application\chrome.exe") { Write-Host "  Chrome:" (Get-Item "C:\Program Files\Google\Chrome\Application\chrome.exe").VersionInfo.FileVersion } else { echo "  Chrome: NOT INSTALLED" }
+    - if (Test-Path "C:\Program Files\Mozilla Firefox\firefox.exe") { Write-Host "  Firefox:" (Get-Item "C:\Program Files\Mozilla Firefox\firefox.exe").VersionInfo.FileVersion } else { echo "  Firefox: NOT INSTALLED" }
+    - if (Test-Path "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe") { Write-Host "  Edge:" (Get-Item "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe").VersionInfo.FileVersion } else { echo "  Edge: NOT INSTALLED" }
+    - echo "========================================"
   
   script:
     - mvn compile -DskipTests --batch-mode -q

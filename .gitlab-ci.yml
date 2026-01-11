@@ -53,11 +53,11 @@ spec:
     executionMode:
       description: 'Execution Mode'
       type: string
-      default: 'local'
+      default: 'selenium-service'
       options:
-        - 'local'
-        - 'docker'
-        - 'grid'
+        - 'local'              # Self-hosted runner with Chrome only
+        - 'selenium-service'   # Built-in sidecar container (shared runners)
+        - 'grid'               # External K8s/Selenium Grid (set GRID_URL var)
 
 ---
 
@@ -104,10 +104,10 @@ variables:
   WAIT_LONG_TIMEOUT: "35"
   WAIT_POLLING_MILLIS: "750"
   
-  # Grid Configuration (set based on EXECUTION_MODE)
-  # local = empty (uses WebDriverManager)
-  # docker = http://selenium:4444 (compose service)
-  # grid = custom external URL
+  # Grid Configuration (set dynamically in before_script based on EXECUTION_MODE)
+  # local = empty (WebDriverManager on self-hosted runner)
+  # selenium-service = http://selenium:4444 (built-in sidecar)
+  # grid = set GRID_URL in CI/CD Variables for external K8s grid
   GRID_URL: ""
   
   # Report Directories
@@ -144,6 +144,43 @@ test:
       alias: selenium
   
   before_script:
+    # Set GRID_URL based on execution mode
+    # - local: Self-hosted runner with Chrome (GRID_URL empty)
+    # - selenium-service: Built-in sidecar container (shared runners)
+    # - grid: External Kubernetes/Selenium Grid
+    - |
+      echo "========================================"
+      echo "  EXECUTION MODE: $EXECUTION_MODE"
+      echo "========================================"
+      case $EXECUTION_MODE in
+        "local")
+          # Requires self-hosted runner with Chrome installed
+          export GRID_URL=""
+          echo "Local mode - using WebDriverManager"
+          echo "NOTE: Only works on self-hosted runners with Chrome"
+          ;;
+        "selenium-service")
+          # Built-in sidecar container (works on shared runners)
+          export GRID_URL="http://selenium:4444"
+          echo "Using Selenium service at $GRID_URL"
+          ;;
+        "grid")
+          # External K8s/Selenium Grid - GRID_URL must be set in CI/CD variables
+          if [ -z "$GRID_URL" ]; then
+            echo "ERROR: GRID_URL variable not set!"
+            echo "Set GRID_URL in CI/CD Variables (Settings → CI/CD → Variables)"
+            echo "Example: http://selenium-grid.your-cluster.com:4444"
+            exit 1
+          fi
+          echo "Using external Selenium Grid at $GRID_URL"
+          ;;
+        *)
+          # Default to selenium-service
+          export GRID_URL="http://selenium:4444"
+          ;;
+      esac
+      echo "Grid URL: ${GRID_URL:-'(empty - local mode)'}"
+    
     # Set browser for scheduled cross-browser runs (matches Azure logic)
     - |
       if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then

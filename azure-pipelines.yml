@@ -203,28 +203,40 @@ stages:
 
           # Test
           # Best Practice: CI = strict (fail), Schedule/Manual = tolerant (warning)
-          - script: |
-              echo ========================================
-              echo   TEST CONFIG
-              echo ========================================
-              echo Tags: $(cucumberTags)
-              echo Browser: $(browser)
-              echo Headless: $(headless)
-              echo Threads: $(dataproviderthreadcount)
-              echo ========================================
-              mvn verify ^
-                -Dtest=ParallelTestRunner ^
-                -Dcucumber.filter.tags="$(cucumberTags)" ^
-                -Dbrowser=$(browser) ^
-                -Ddataproviderthreadcount=$(dataproviderthreadcount) ^
-                -Dheadless=$(headless) ^
-                -Dwait.short.timeout=$(waitShortTimeout) ^
-                -Dwait.long.timeout=$(waitLongTimeout) ^
-                -Dwait.polling.millis=$(waitPollingMillis) ^
-                -DgridUrl=$(gridUrl) ^
-                -Dretry.count=$(retryCount) ^
-                -Dsurefire.rerunFailingTestsCount=$(retryCount) ^
-                -Dallure.results.directory=$(allureResultsDir) ^
+          - powershell: |
+              Write-Host "========================================"
+              Write-Host "  TEST CONFIG"
+              Write-Host "========================================"
+              Write-Host "Tags: $(cucumberTags)"
+              Write-Host "Browser: $(browser)"
+              Write-Host "Headless: $(headless)"
+              Write-Host "Threads: $(dataproviderthreadcount)"
+              Write-Host "Execution Mode: $(executionMode)"
+              Write-Host "Grid URL: [$(gridUrl)]"
+              Write-Host "========================================"
+              
+              # Build Maven command - conditionally include gridUrl only if not empty
+              $gridUrlArg = ""
+              if ("$(gridUrl)" -ne "") {
+                $gridUrlArg = "-DgridUrl=$(gridUrl)"
+                Write-Host "Using Remote Grid: $(gridUrl)"
+              } else {
+                Write-Host "Using Local ChromeDriver via WebDriverManager"
+              }
+              
+              mvn verify `
+                -Dtest=ParallelTestRunner `
+                "-Dcucumber.filter.tags=$(cucumberTags)" `
+                -Dbrowser=$(browser) `
+                -Ddataproviderthreadcount=$(dataproviderthreadcount) `
+                -Dheadless=$(headless) `
+                -Dwait.short.timeout=$(waitShortTimeout) `
+                -Dwait.long.timeout=$(waitLongTimeout) `
+                -Dwait.polling.millis=$(waitPollingMillis) `
+                $gridUrlArg `
+                -Dretry.count=$(retryCount) `
+                -Dsurefire.rerunFailingTestsCount=$(retryCount) `
+                -Dallure.results.directory=$(allureResultsDir) `
                 -B
             displayName: '🧪 Run Tests'
             # Conditional: Schedule/Manual = warning, CI/PR = fail

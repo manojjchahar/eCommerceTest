@@ -5,11 +5,67 @@
 # ============================================
 
 # ============================================
+# PIPELINE INPUTS (appear in Run Pipeline UI)
+# ============================================
+spec:
+  inputs:
+    cucumberTags:
+      description: 'Cucumber Tags to Run'
+      type: string
+      default: '@eCommFull'
+      options:
+        - '@eCommFull'
+        - '@UI'
+        - '@API'
+        - '@smoke'
+        - '@Products'
+        - '@Cart'
+        - '@Auth'
+    browser:
+      description: 'Browser for UI Tests'
+      type: string
+      default: 'chrome'
+      options:
+        - 'chrome'
+        - 'firefox'
+        - 'edge'
+    headless:
+      description: 'Run in Headless Mode'
+      type: boolean
+      default: true
+    parallelThreads:
+      description: 'Parallel Threads'
+      type: string
+      default: '2'
+      options:
+        - '1'
+        - '2'
+        - '4'
+    retryCount:
+      description: 'Retry Failed Tests'
+      type: string
+      default: '1'
+      options:
+        - '0'
+        - '1'
+        - '2'
+        - '3'
+    executionMode:
+      description: 'Execution Mode'
+      type: string
+      default: 'local'
+      options:
+        - 'local'
+        - 'docker'
+        - 'grid'
+
+---
+
+# ============================================
 # WORKFLOW RULES (Triggers)
 # ============================================
 workflow:
-  # Pipeline naming: shows trigger source and branch (GitLab 16.8+)
-  name: '$CI_PIPELINE_SOURCE - $CI_COMMIT_REF_NAME - $CUCUMBER_TAGS'
+  name: '$CI_PIPELINE_SOURCE - $CI_COMMIT_REF_NAME - $[[ inputs.cucumberTags ]]'
   rules:
     # CI Trigger - Push to main/master
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
@@ -28,28 +84,25 @@ default:
   # Note: Removed 'tags: docker' - GitLab.com shared runners work without tags
 
 # ============================================
-# VARIABLES (with on-demand overrides)
+# VARIABLES (use inputs for manual runs, defaults for CI/scheduled)
 # ============================================
 variables:
   # Maven Configuration
   MAVEN_OPTS: "-Xmx1024m -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end"
   
-  # Test Configuration (can be overridden via UI or API)
-  CUCUMBER_TAGS: "@eCommFull"
-  BROWSER: "chrome"
-  HEADLESS: "true"
-  PARALLEL_THREADS: "2"
-  RETRY_COUNT: "1"
+  # Test Configuration (from inputs or defaults)
+  CUCUMBER_TAGS: $[[ inputs.cucumberTags | default('@eCommFull') ]]
+  BROWSER: $[[ inputs.browser | default('chrome') ]]
+  HEADLESS: $[[ inputs.headless | default(true) ]]
+  PARALLEL_THREADS: $[[ inputs.parallelThreads | default('2') ]]
+  RETRY_COUNT: $[[ inputs.retryCount | default('1') ]]
+  EXECUTION_MODE: $[[ inputs.executionMode | default('local') ]]
   
   # Timeouts
   WAIT_SHORT_TIMEOUT: "25"
   WAIT_LONG_TIMEOUT: "35"
   WAIT_POLLING_MILLIS: "750"
-  
-  # Execution Mode: local, docker, grid
-  # Override in CI/CD Variables or Pipeline UI
-  EXECUTION_MODE: "local"
   
   # Grid Configuration (set based on EXECUTION_MODE)
   # local = empty (uses WebDriverManager)

@@ -81,13 +81,11 @@ parameters:
 trigger:
   branches:
     include:
-      - main
       - master
 
 pr:
   branches:
     include:
-      - main
       - master
 
 schedules:
@@ -208,6 +206,7 @@ stages:
               MAVEN_OPTS: '$(MAVEN_OPTS)'
 
           # Test
+          # Best Practice: CI = strict (fail), Schedule/Manual = tolerant (warning)
           - script: |
               echo ========================================
               echo   TEST CONFIG
@@ -232,7 +231,11 @@ stages:
                 -Dallure.results.directory=$(allureResultsDir) ^
                 -B
             displayName: '🧪 Run Tests'
-            continueOnError: true
+            # Conditional: Schedule/Manual = warning, CI/PR = fail
+            ${{ if or(eq(variables['Build.Reason'], 'Schedule'), eq(variables['Build.Reason'], 'Manual')) }}:
+              continueOnError: true
+            ${{ else }}:
+              continueOnError: false
             env:
               MAVEN_OPTS: '$(MAVEN_OPTS)'
 

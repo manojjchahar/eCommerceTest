@@ -144,8 +144,23 @@ test-local:
   tags:
     - local
     - windows
+  # Conditional rules: Push/MR = strict, Manual/Scheduled = warning
   rules:
+    # Push to main/master - STRICT (red on failure)
+    - if: $EXECUTION_MODE == "local" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master")
+      allow_failure: false
+    # MR - STRICT (red on failure)
+    - if: $EXECUTION_MODE == "local" && $CI_PIPELINE_SOURCE == "merge_request_event"
+      allow_failure: false
+    # Manual/Web - TOLERANT (yellow on failure)
+    - if: $EXECUTION_MODE == "local" && $CI_PIPELINE_SOURCE == "web"
+      allow_failure: true
+    # Scheduled - TOLERANT (yellow on failure)
+    - if: $EXECUTION_MODE == "local" && $CI_PIPELINE_SOURCE == "schedule"
+      allow_failure: true
+    # Default for other cases
     - if: $EXECUTION_MODE == "local"
+      allow_failure: true
   cache:
     key: "local-${CI_COMMIT_REF_SLUG}"
     paths:
@@ -155,7 +170,7 @@ test-local:
     - echo "========================================"
     - echo "  LOCAL MODE - Self-hosted Windows Runner"
     - echo "========================================"
-    - echo "Selected Browser - %BROWSER%"
+    - echo "Selected Browser - $env:BROWSER"
     - echo "Using WebDriverManager to auto-download driver"
     - java -version
     - mvn --version
@@ -172,18 +187,30 @@ test-local:
     reports:
       junit: target/surefire-reports/TEST-*.xml
     expire_in: 7 days
-  # Best Practice: Scheduled runs = warning on failure, PR/push = strict
-  allow_failure:
-    exit_codes:
-      - 1  # Test failures return exit code 1
 
 # Job for SELENIUM-SERVICE and GRID execution (shared runners)
 test:
   stage: test
+  # Conditional rules: Push/MR = strict, Manual/Scheduled = warning
   rules:
+    # Skip if local execution mode
     - if: $EXECUTION_MODE == "local"
       when: never
+    # Push to main/master - STRICT (red on failure)
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+      allow_failure: false
+    # MR - STRICT (red on failure)
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      allow_failure: false
+    # Manual/Web - TOLERANT (yellow on failure)
+    - if: $CI_PIPELINE_SOURCE == "web"
+      allow_failure: true
+    # Scheduled - TOLERANT (yellow on failure)
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      allow_failure: true
+    # Default
     - when: always
+      allow_failure: true
   services:
     - name: selenium/standalone-chrome:latest
       alias: selenium
@@ -301,10 +328,6 @@ test:
     reports:
       junit: target/surefire-reports/TEST-*.xml
     expire_in: 7 days
-  # Best Practice: Scheduled runs = warning on failure, PR/push = strict
-  allow_failure:
-    exit_codes:
-      - 1  # Test failures return exit code 1
 
 # ============================================
 # STAGE 2: GENERATE REPORTS

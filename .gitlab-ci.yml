@@ -262,6 +262,27 @@ test:
     - |
       if [ -n "$GRID_URL" ]; then
         echo "========================================"
+        echo "  DEBUGGING NETWORK CONNECTIVITY"
+        echo "========================================"
+        # Check DNS resolution
+        echo "Checking DNS resolution for 'selenium'..."
+        getent hosts selenium || echo "DNS lookup failed for 'selenium'"
+        nslookup selenium || echo "nslookup failed"
+        
+        # Check if we can ping the service
+        echo "Checking if selenium host is reachable..."
+        ping -c 2 selenium 2>/dev/null || echo "Ping failed (may be blocked)"
+        
+        # Check what ports are listening
+        echo "Checking ports on selenium:4444..."
+        nc -zv selenium 4444 2>&1 || echo "Port 4444 not reachable"
+        
+        # Try alternative hostnames
+        echo "Trying alternative hostnames..."
+        curl -s --connect-timeout 5 "http://selenium:4444/wd/hub/status" 2>&1 || echo "selenium:4444 failed"
+        curl -s --connect-timeout 5 "http://localhost:4444/wd/hub/status" 2>&1 || echo "localhost:4444 failed"
+        
+        echo "========================================"
         echo "  WAITING FOR SELENIUM GRID"
         echo "========================================"
         MAX_RETRIES=30
@@ -279,7 +300,8 @@ test:
         done
         if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
           echo "❌ Selenium Grid failed to start!"
-          curl -s "$GRID_URL/wd/hub/status" || echo "Cannot reach Grid"
+          echo "Final debug info:"
+          curl -v "$GRID_URL/wd/hub/status" 2>&1 || echo "Cannot reach Grid"
           exit 1
         fi
       fi

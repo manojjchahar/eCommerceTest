@@ -137,8 +137,58 @@ stages:
 # Daily 3-Browser Rotation @ 2:00 AM IST (20:30 UTC) on 'develop' branch
 # Mon=Chrome, Tue=Firefox, Wed=Edge, Thu=Chrome, Fri=Firefox, Sat=Edge, Sun=Chrome
 
+# Job for LOCAL execution (self-hosted Windows runner)
+test:local:
+  stage: test
+  tags:
+    - local
+    - windows
+  rules:
+    - if: $EXECUTION_MODE == "local"
+  
+  before_script:
+    - echo "========================================"
+    - echo "  LOCAL MODE - Self-hosted Windows Runner"
+    - echo "========================================"
+    - echo "Using WebDriverManager with local Chrome"
+    - Write-Host "Java Version:" ; java -version
+    - Write-Host "Maven Version:" ; mvn --version
+    - Write-Host "Chrome Version:" ; (Get-Item "C:\Program Files\Google\Chrome\Application\chrome.exe").VersionInfo.FileVersion
+  
+  script:
+    - mvn compile -DskipTests --batch-mode -q
+    - >
+      mvn verify --batch-mode --errors
+      -Dtest=ParallelTestRunner
+      -Dcucumber.filter.tags="$CUCUMBER_TAGS"
+      -Dbrowser=$BROWSER
+      -Ddataproviderthreadcount=$PARALLEL_THREADS
+      -Dheadless=$HEADLESS
+      -Dwait.short.timeout=$WAIT_SHORT_TIMEOUT
+      -Dwait.long.timeout=$WAIT_LONG_TIMEOUT
+      -Dwait.polling.millis=$WAIT_POLLING_MILLIS
+      -Dretry.count=$RETRY_COUNT
+      -Dsurefire.rerunFailingTestsCount=$RETRY_COUNT
+      -Dallure.results.directory=$ALLURE_RESULTS_DIR
+      || true
+  
+  artifacts:
+    when: always
+    paths:
+      - target/
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
+    expire_in: 7 days
+  
+  allow_failure: false
+
+# Job for SELENIUM-SERVICE and GRID execution (shared runners)
 test:
   stage: test
+  rules:
+    - if: $EXECUTION_MODE == "local"
+      when: never
+    - when: always
   services:
     - name: selenium/standalone-chrome:latest
       alias: selenium

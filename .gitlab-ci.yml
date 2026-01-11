@@ -155,15 +155,15 @@ test-local:
     - echo "========================================"
     - echo "  LOCAL MODE - Self-hosted Windows Runner"
     - echo "========================================"
-    - echo "Selected Browser - $env:BROWSER"
+    - echo "Selected Browser - %BROWSER%"
     - echo "Using WebDriverManager to auto-download driver"
     - java -version
     - mvn --version
     - echo "========================================"
   
   script:
-    - mvn compile -DskipTests --batch-mode -q
-    - mvn verify --batch-mode --errors -Dtest=ParallelTestRunner "-Dcucumber.filter.tags=$env:CUCUMBER_TAGS" -Dbrowser=$env:BROWSER -Ddataproviderthreadcount=$env:PARALLEL_THREADS -Dheadless=$env:HEADLESS "-Dwait.short.timeout=$env:WAIT_SHORT_TIMEOUT" "-Dwait.long.timeout=$env:WAIT_LONG_TIMEOUT" "-Dwait.polling.millis=$env:WAIT_POLLING_MILLIS" -Dretry.count=$env:RETRY_COUNT -Dsurefire.rerunFailingTestsCount=$env:RETRY_COUNT -Dallure.results.directory=$env:ALLURE_RESULTS_DIR
+    - mvn compile "-DskipTests" --batch-mode -q
+    - mvn verify --batch-mode --errors "-Dtest=ParallelTestRunner" "-Dcucumber.filter.tags=$env:CUCUMBER_TAGS" "-Dbrowser=$env:BROWSER" "-Ddataproviderthreadcount=$env:PARALLEL_THREADS" "-Dheadless=$env:HEADLESS" "-Dwait.short.timeout=$env:WAIT_SHORT_TIMEOUT" "-Dwait.long.timeout=$env:WAIT_LONG_TIMEOUT" "-Dwait.polling.millis=$env:WAIT_POLLING_MILLIS" "-Dretry.count=$env:RETRY_COUNT" "-Dsurefire.rerunFailingTestsCount=$env:RETRY_COUNT" "-Dallure.results.directory=$env:ALLURE_RESULTS_DIR"
   
   artifacts:
     when: always

@@ -91,13 +91,13 @@ variables:
   MAVEN_OPTS: "-Xmx1024m -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end"
   
-  # Test Configuration (from inputs or defaults)
-  CUCUMBER_TAGS: $[[ inputs.cucumberTags | default('@eCommFull') ]]
-  BROWSER: $[[ inputs.browser | default('chrome') ]]
-  HEADLESS: $[[ inputs.headless | default(true) ]]
-  PARALLEL_THREADS: $[[ inputs.parallelThreads | default('2') ]]
-  RETRY_COUNT: $[[ inputs.retryCount | default('1') ]]
-  EXECUTION_MODE: $[[ inputs.executionMode | default('local') ]]
+  # Test Configuration (from inputs - defaults defined in spec section)
+  CUCUMBER_TAGS: $[[ inputs.cucumberTags ]]
+  BROWSER: $[[ inputs.browser ]]
+  HEADLESS: $[[ inputs.headless ]]
+  PARALLEL_THREADS: $[[ inputs.parallelThreads ]]
+  RETRY_COUNT: $[[ inputs.retryCount ]]
+  EXECUTION_MODE: $[[ inputs.executionMode ]]
   
   # Timeouts
   WAIT_SHORT_TIMEOUT: "25"

@@ -195,6 +195,70 @@ stages:
           # Maven dependencies are stored at: C:\Users\<user>\.m2\repository
           # Once downloaded, they're reused across all pipeline runs automatically
 
+          # Start Selenium Grid via Docker (only for docker execution mode)
+          - ${{ if eq(parameters.executionMode, 'docker') }}:
+            - powershell: |
+                Write-Host "========================================"
+                Write-Host "  STARTING SELENIUM GRID (Docker Mode)"
+                Write-Host "========================================"
+                Write-Host "Browser: $(browser)"
+                
+                # Stop any existing containers
+                docker-compose down --remove-orphans 2>$null
+                
+                # Start only the required services based on browser
+                $browser = "$(browser)".ToLower()
+                switch ($browser) {
+                  "chrome" { 
+                    docker-compose up -d selenium-hub chrome
+                    Write-Host "Started: selenium-hub + chrome node"
+                  }
+                  "firefox" { 
+                    docker-compose up -d selenium-hub firefox
+                    Write-Host "Started: selenium-hub + firefox node"
+                  }
+                  "edge" { 
+                    docker-compose up -d selenium-hub edge
+                    Write-Host "Started: selenium-hub + edge node"
+                  }
+                  default {
+                    docker-compose up -d selenium-hub chrome
+                    Write-Host "Started: selenium-hub + chrome node (default)"
+                  }
+                }
+                
+                # Wait for Selenium Grid to be ready
+                Write-Host "Waiting for Selenium Grid to be ready..."
+                $maxRetries = 30
+                $retryCount = 0
+                while ($retryCount -lt $maxRetries) {
+                  try {
+                    $response = Invoke-WebRequest -Uri "http://localhost:4444/wd/hub/status" -UseBasicParsing -TimeoutSec 5
+                    $status = $response.Content | ConvertFrom-Json
+                    if ($status.value.ready -eq $true) {
+                      Write-Host "✅ Selenium Grid is ready!"
+                      Write-Host "Grid URL: http://localhost:4444"
+                      Write-Host "Grid UI:  http://localhost:4444/ui"
+                      break
+                    }
+                  } catch {
+                    Write-Host "Waiting... ($retryCount/$maxRetries)"
+                  }
+                  Start-Sleep -Seconds 2
+                  $retryCount++
+                }
+                
+                if ($retryCount -eq $maxRetries) {
+                  Write-Host "❌ Selenium Grid failed to start!"
+                  docker-compose logs
+                  exit 1
+                }
+                
+                # Show running containers
+                docker-compose ps
+              displayName: '🐳 Start Selenium Grid (Docker)'
+              workingDirectory: '$(System.DefaultWorkingDirectory)'
+
           # Build
           - script: mvn compile -DskipTests -B -q
             displayName: '🔨 Compile'
@@ -266,6 +330,18 @@ stages:
               targetPath: '$(System.DefaultWorkingDirectory)/target'
               artifact: 'test-output'
               publishLocation: 'pipeline'
+
+          # Stop Selenium Grid containers (only for docker execution mode)
+          - ${{ if eq(parameters.executionMode, 'docker') }}:
+            - powershell: |
+                Write-Host "========================================"
+                Write-Host "  STOPPING SELENIUM GRID (Docker Mode)"
+                Write-Host "========================================"
+                docker-compose down --remove-orphans
+                Write-Host "✅ All Selenium Grid containers stopped"
+              displayName: '🐳 Stop Selenium Grid (Docker)'
+              condition: always()
+              workingDirectory: '$(System.DefaultWorkingDirectory)'
 
   # ==========================================
   # STAGE 2: GENERATE REPORTS

@@ -317,6 +317,10 @@ report:
   needs:
     - job: test
       artifacts: true
+      optional: true
+    - job: test:local
+      artifacts: true
+      optional: true
   
   script:
     - echo "Generating Allure Report..."

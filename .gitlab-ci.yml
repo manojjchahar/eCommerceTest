@@ -212,8 +212,13 @@ test:
     - when: always
       allow_failure: true
   services:
-    - name: selenium/standalone-chrome:latest
+    - name: selenium/standalone-chrome:4.27.0
       alias: selenium
+      # Required for Chrome stability on shared runners
+      variables:
+        SE_START_XVFB: "false"
+        SE_NODE_MAX_SESSIONS: "2"
+        START_XVFB: "false"
   
   before_script:
     # Set GRID_URL based on execution mode

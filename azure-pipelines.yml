@@ -275,14 +275,7 @@ stages:
               artifact: 'test-output'
               path: '$(System.DefaultWorkingDirectory)/target'
 
-          # Restore Maven cache for Allure plugin
-          - task: Cache@2
-            displayName: '� Restore Maven Cache'
-            continueOnError: true
-            inputs:
-              key: 'maven | "$(Agent.OS)" | **/pom.xml'
-              restoreKeys: maven | "$(Agent.OS)"
-              path: '$(UserProfile)/.m2/repository'
+          # Note: No cache task needed - self-hosted agent has persistent .m2 folder
 
           # Generate Allure Report
           - script: mvn allure:report -DskipTests -B -q

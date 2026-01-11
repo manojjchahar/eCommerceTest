@@ -191,26 +191,9 @@ stages:
               echo ========================================
             displayName: '☕ Verify Environment'
 
-          - task: Cache@2
-            displayName: '📦 Restore Maven Cache'
-            continueOnError: true
-            inputs:
-              # Use pom.xml hash for cache key - only invalidates when dependencies change
-              key: 'maven | "$(Agent.OS)" | pom.xml'
-              restoreKeys: |
-                maven | "$(Agent.OS)"
-                maven
-              # Windows path for self-hosted agent
-              path: '$(USERPROFILE)\.m2\repository'
-              cacheHitVar: 'MAVEN_CACHE_HIT'
-          
-          - script: |
-              if "$(MAVEN_CACHE_HIT)" == "true" (
-                echo ✅ Maven cache restored successfully
-              ) else (
-                echo ⏳ Cache miss - dependencies will be downloaded
-              )
-            displayName: '📊 Cache Status'
+          # Note: Cache@2 task removed - self-hosted agent already has persistent .m2 folder
+          # Maven dependencies are stored at: C:\Users\<user>\.m2\repository
+          # Once downloaded, they're reused across all pipeline runs automatically
 
           # Build
           - script: mvn compile -DskipTests -B -q

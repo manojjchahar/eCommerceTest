@@ -138,19 +138,24 @@ stages:
 # Mon=Chrome, Tue=Firefox, Wed=Edge, Thu=Chrome, Fri=Firefox, Sat=Edge, Sun=Chrome
 
 # Job for LOCAL execution (self-hosted Windows runner)
-test:local:
+# Note: Job name uses hyphen (not colon) to avoid Windows path issues
+test-local:
   stage: test
   tags:
     - local
     - windows
   rules:
     - if: $EXECUTION_MODE == "local"
+  cache:
+    key: "local-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .m2/repository/
   
   before_script:
     - echo "========================================"
     - echo "  LOCAL MODE - Self-hosted Windows Runner"
     - echo "========================================"
-    - echo "Selected Browser - %BROWSER%"
+    - echo "Selected Browser - $env:BROWSER"
     - echo "Using WebDriverManager to auto-download driver"
     - java -version
     - mvn --version
@@ -158,20 +163,7 @@ test:local:
   
   script:
     - mvn compile -DskipTests --batch-mode -q
-    - |
-      mvn verify --batch-mode --errors `
-        -Dtest=ParallelTestRunner `
-        "-Dcucumber.filter.tags=$env:CUCUMBER_TAGS" `
-        -Dbrowser=$env:BROWSER `
-        -Ddataproviderthreadcount=$env:PARALLEL_THREADS `
-        -Dheadless=$env:HEADLESS `
-        -Dwait.short.timeout=$env:WAIT_SHORT_TIMEOUT `
-        -Dwait.long.timeout=$env:WAIT_LONG_TIMEOUT `
-        -Dwait.polling.millis=$env:WAIT_POLLING_MILLIS `
-        -Dretry.count=$env:RETRY_COUNT `
-        -Dsurefire.rerunFailingTestsCount=$env:RETRY_COUNT `
-        -Dallure.results.directory=$env:ALLURE_RESULTS_DIR
-      if ($LASTEXITCODE -ne 0) { Write-Host "Tests completed with failures" }
+    - mvn verify --batch-mode --errors -Dtest=ParallelTestRunner "-Dcucumber.filter.tags=$env:CUCUMBER_TAGS" -Dbrowser=$env:BROWSER -Ddataproviderthreadcount=$env:PARALLEL_THREADS -Dheadless=$env:HEADLESS "-Dwait.short.timeout=$env:WAIT_SHORT_TIMEOUT" "-Dwait.long.timeout=$env:WAIT_LONG_TIMEOUT" "-Dwait.polling.millis=$env:WAIT_POLLING_MILLIS" -Dretry.count=$env:RETRY_COUNT -Dsurefire.rerunFailingTestsCount=$env:RETRY_COUNT -Dallure.results.directory=$env:ALLURE_RESULTS_DIR
   
   artifacts:
     when: always
@@ -319,7 +311,7 @@ report:
     - job: test
       artifacts: true
       optional: true
-    - job: test:local
+    - job: test-local
       artifacts: true
       optional: true
   

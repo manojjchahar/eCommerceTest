@@ -172,8 +172,10 @@ test-local:
     reports:
       junit: target/surefire-reports/TEST-*.xml
     expire_in: 7 days
-  
-  allow_failure: false
+  # Best Practice: Scheduled runs = warning on failure, PR/push = strict
+  allow_failure:
+    exit_codes:
+      - 1  # Test failures return exit code 1
 
 # Job for SELENIUM-SERVICE and GRID execution (shared runners)
 test:
@@ -299,8 +301,10 @@ test:
     reports:
       junit: target/surefire-reports/TEST-*.xml
     expire_in: 7 days
-  
-  allow_failure: false
+  # Best Practice: Scheduled runs = warning on failure, PR/push = strict
+  allow_failure:
+    exit_codes:
+      - 1  # Test failures return exit code 1
 
 # ============================================
 # STAGE 2: GENERATE REPORTS

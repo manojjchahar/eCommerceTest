@@ -289,18 +289,18 @@ stages:
               }
               
               mvn verify `
-                -Dtest=ParallelTestRunner `
+                "-Dtest=ParallelTestRunner" `
                 "-Dcucumber.filter.tags=$(cucumberTags)" `
-                -Dbrowser=$(browser) `
-                -Ddataproviderthreadcount=$(dataproviderthreadcount) `
-                -Dheadless=$(headless) `
-                -Dwait.short.timeout=$(waitShortTimeout) `
-                -Dwait.long.timeout=$(waitLongTimeout) `
-                -Dwait.polling.millis=$(waitPollingMillis) `
+                "-Dbrowser=$(browser)" `
+                "-Ddataproviderthreadcount=$(dataproviderthreadcount)" `
+                "-Dheadless=$(headless)" `
+                "-Dwait.short.timeout=$(waitShortTimeout)" `
+                "-Dwait.long.timeout=$(waitLongTimeout)" `
+                "-Dwait.polling.millis=$(waitPollingMillis)" `
                 $gridUrlArg `
-                -Dretry.count=$(retryCount) `
-                -Dsurefire.rerunFailingTestsCount=$(retryCount) `
-                -Dallure.results.directory=$(allureResultsDir) `
+                "-Dretry.count=$(retryCount)" `
+                "-Dsurefire.rerunFailingTestsCount=$(retryCount)" `
+                "-Dallure.results.directory=$(allureResultsDir)" `
                 -B
             displayName: '🧪 Run Tests'
             # Conditional: Schedule/Manual = warning, CI/PR = fail

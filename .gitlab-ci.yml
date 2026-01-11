@@ -80,6 +80,10 @@ stages:
 # ============================================
 # STAGE 1: TEST EXECUTION
 # ============================================
+# SCHEDULED RUNS: Create in GitLab UI (Settings → CI/CD → Schedules)
+# Daily 3-Browser Rotation @ 2:00 AM IST (20:30 UTC) on 'develop' branch
+# Mon=Chrome, Tue=Firefox, Wed=Edge, Thu=Chrome, Fri=Firefox, Sat=Edge, Sun=Chrome
+
 test:
   stage: test
   services:
@@ -87,6 +91,27 @@ test:
       alias: selenium
   
   before_script:
+    # Set browser for scheduled cross-browser runs (matches Azure logic)
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then
+        DAY_OF_WEEK=$(date +%u)
+        case $DAY_OF_WEEK in
+          1) export BROWSER="chrome" ;;   # Monday
+          2) export BROWSER="firefox" ;;  # Tuesday
+          3) export BROWSER="edge" ;;     # Wednesday
+          4) export BROWSER="chrome" ;;   # Thursday
+          5) export BROWSER="firefox" ;;  # Friday
+          6) export BROWSER="edge" ;;     # Saturday
+          7) export BROWSER="chrome" ;;   # Sunday
+          *) export BROWSER="chrome" ;;
+        esac
+        echo "========================================"
+        echo "  SCHEDULED CROSS-BROWSER TEST"
+        echo "========================================"
+        echo "Day of Week: $DAY_OF_WEEK"
+        echo "Browser:     $BROWSER"
+        echo "========================================"
+      fi
     - echo "========================================"
     - echo "  PIPELINE TRIGGER INFO"
     - echo "========================================"

@@ -91,21 +91,13 @@ pr:
       - master
 
 schedules:
-  - cron: '30 20 * * 0-4'
-    displayName: 'Nightly Full Tests (Mon-Fri 2:00 AM IST)'
+  # Daily 3-Browser Rotation @ 2:00 AM IST
+  # Mon=Chrome, Tue=Firefox, Wed=Edge, Thu=Chrome, Fri=Firefox, Sat=Edge, Sun=Chrome
+  - cron: '30 20 * * *'
+    displayName: 'Daily Cross-Browser Tests (2:00 AM IST)'
     branches:
       include:
-        - main
-        - master
-    always: false
-    batch: true
-
-  - cron: '30 21 * * 5'
-    displayName: 'Weekly Full Suite (Sat 3:00 AM IST)'
-    branches:
-      include:
-        - main
-        - master
+        - develop
     always: true
     batch: true
 
@@ -114,12 +106,15 @@ schedules:
 # ============================================
 variables:
   MAVEN_OPTS: '-Xmx1024m'
+  # Tags based on trigger
   ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
     cucumberTags: '@eCommFull'
   ${{ elseif eq(variables['Build.Reason'], 'Manual') }}:
     cucumberTags: '${{ parameters.cucumberTags }}'
   ${{ else }}:
     cucumberTags: '@UI'
+  # Browser: For scheduled runs, will be set by script based on day
+  # For manual runs, use parameter
   browser: '${{ parameters.browser }}'
   dataproviderthreadcount: '${{ parameters.parallelThreads }}'
   headless: '${{ parameters.headless }}'
@@ -153,6 +148,37 @@ stages:
         pool:
           name: 'Default'
         steps:
+          # Set browser for scheduled cross-browser runs
+          # Daily 3-browser rotation starting Monday: Chrome → Firefox → Edge
+          - powershell: |
+              $dayOfWeek = (Get-Date).DayOfWeek.value__
+              $buildReason = "$(Build.Reason)"
+              
+              if ($buildReason -eq "Schedule") {
+                # Mon=Chrome, Tue=Firefox, Wed=Edge, Thu=Chrome, Fri=Firefox, Sat=Edge, Sun=Chrome
+                switch ($dayOfWeek) {
+                  1 { $browser = "chrome" }   # Monday
+                  2 { $browser = "firefox" }  # Tuesday
+                  3 { $browser = "edge" }     # Wednesday
+                  4 { $browser = "chrome" }   # Thursday
+                  5 { $browser = "firefox" }  # Friday
+                  6 { $browser = "edge" }     # Saturday
+                  0 { $browser = "chrome" }   # Sunday
+                  default { $browser = "chrome" }
+                }
+                Write-Host "##vso[task.setvariable variable=browser]$browser"
+                Write-Host "========================================"
+                Write-Host "  SCHEDULED CROSS-BROWSER TEST"
+                Write-Host "========================================"
+                Write-Host "Day of Week: $dayOfWeek"
+                Write-Host "Browser:     $browser"
+                Write-Host "========================================"
+              } else {
+                Write-Host "Manual/CI run - Using parameter browser: $(browser)"
+              }
+            displayName: '🌐 Set Browser for Scheduled Runs'
+            condition: always()
+
           # Setup
           - script: |
               echo ========================================
@@ -161,6 +187,9 @@ stages:
               echo JAVA_HOME=%JAVA_HOME%
               java -version
               mvn -version
+              echo ========================================
+              echo Browser: $(browser)
+              echo Tags: $(cucumberTags)
               echo ========================================
             displayName: '☕ Verify Environment'
 

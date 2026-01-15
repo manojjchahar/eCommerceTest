@@ -424,13 +424,15 @@ report:
 # ============================================
 pages:
   stage: report
+  # Force Linux runner (not Windows) for proper shell syntax
+  image: alpine:latest
   needs:
     - job: report
       artifacts: true
   
   script:
     - mkdir -p public
-    - cp -r $ALLURE_REPORT_DIR/* public/ || echo "No Allure report to publish"
+    - cp -r $ALLURE_REPORT_DIR/* public/ 2>/dev/null || echo "No Allure report to publish"
     - echo "Allure report published to GitLab Pages"
   
   artifacts:

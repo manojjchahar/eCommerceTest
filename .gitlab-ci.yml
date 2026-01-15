@@ -181,7 +181,16 @@ test-local:
   
   script:
     - mvn compile "-DskipTests" --batch-mode -q
-    - mvn verify --batch-mode --errors "-Dtest=ParallelTestRunner" "-Dcucumber.filter.tags=$env:CUCUMBER_TAGS" "-Dbrowser=$env:BROWSER" "-Ddataproviderthreadcount=$env:PARALLEL_THREADS" "-Dheadless=$env:HEADLESS" "-Dwait.short.timeout=$env:WAIT_SHORT_TIMEOUT" "-Dwait.long.timeout=$env:WAIT_LONG_TIMEOUT" "-Dwait.polling.millis=$env:WAIT_POLLING_MILLIS" "-Dretry.count=$env:RETRY_COUNT" "-Dsurefire.rerunFailingTestsCount=$env:RETRY_COUNT" "-Dallure.results.directory=$env:ALLURE_RESULTS_DIR"
+    - |
+      # Determine which tags to use
+      if ($env:CUCUMBER_CUSTOM_TAGS) {
+        $effectiveTags = $env:CUCUMBER_CUSTOM_TAGS
+        Write-Host "Using CUSTOM tags: $effectiveTags"
+      } else {
+        $effectiveTags = $env:CUCUMBER_TAGS
+        Write-Host "Using DROPDOWN tags: $effectiveTags"
+      }
+      mvn verify --batch-mode --errors "-Dtest=ParallelTestRunner" "-Dcucumber.filter.tags=$effectiveTags" "-Dbrowser=$env:BROWSER" "-Ddataproviderthreadcount=$env:PARALLEL_THREADS" "-Dheadless=$env:HEADLESS" "-Dwait.short.timeout=$env:WAIT_SHORT_TIMEOUT" "-Dwait.long.timeout=$env:WAIT_LONG_TIMEOUT" "-Dwait.polling.millis=$env:WAIT_POLLING_MILLIS" "-Dretry.count=$env:RETRY_COUNT" "-Dsurefire.rerunFailingTestsCount=$env:RETRY_COUNT" "-Dallure.results.directory=$env:ALLURE_RESULTS_DIR"
   
   artifacts:
     when: always
@@ -354,22 +363,18 @@ test:
     # Compile
     - mvn compile -DskipTests $MAVEN_CLI_OPTS -q
     
-    # Run Tests
-    - >
-      mvn verify $MAVEN_CLI_OPTS
-      -Dtest=ParallelTestRunner
-      -Dcucumber.filter.tags="$CUCUMBER_TAGS"
-      -Dbrowser=$BROWSER
-      -Ddataproviderthreadcount=$PARALLEL_THREADS
-      -Dheadless=$HEADLESS
-      -Dwait.short.timeout=$WAIT_SHORT_TIMEOUT
-      -Dwait.long.timeout=$WAIT_LONG_TIMEOUT
-      -Dwait.polling.millis=$WAIT_POLLING_MILLIS
-      -DgridUrl=$GRID_URL
-      -Dretry.count=$RETRY_COUNT
-      -Dsurefire.rerunFailingTestsCount=$RETRY_COUNT
-      -Dallure.results.directory=$ALLURE_RESULTS_DIR
-      || true
+    # Run Tests - Use CUCUMBER_CUSTOM_TAGS if provided, otherwise CUCUMBER_TAGS
+    - |
+      # Determine which tags to use
+      if [ -n "$CUCUMBER_CUSTOM_TAGS" ]; then
+        EFFECTIVE_TAGS="$CUCUMBER_CUSTOM_TAGS"
+        echo "Using CUSTOM tags: $EFFECTIVE_TAGS"
+      else
+        EFFECTIVE_TAGS="$CUCUMBER_TAGS"
+        echo "Using DROPDOWN tags: $EFFECTIVE_TAGS"
+      fi
+      
+      mvn verify $MAVEN_CLI_OPTS -Dtest=ParallelTestRunner -Dcucumber.filter.tags="$EFFECTIVE_TAGS" -Dbrowser=$BROWSER -Ddataproviderthreadcount=$PARALLEL_THREADS -Dheadless=$HEADLESS -Dwait.short.timeout=$WAIT_SHORT_TIMEOUT -Dwait.long.timeout=$WAIT_LONG_TIMEOUT -Dwait.polling.millis=$WAIT_POLLING_MILLIS -DgridUrl=$GRID_URL -Dretry.count=$RETRY_COUNT -Dsurefire.rerunFailingTestsCount=$RETRY_COUNT -Dallure.results.directory=$ALLURE_RESULTS_DIR || true
   
   after_script:
     - echo "Test execution completed"

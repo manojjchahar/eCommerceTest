@@ -262,48 +262,36 @@ test:
     # Wait for Selenium Grid to be ready (only for selenium-service/grid modes)
     - |
       if [ -n "$GRID_URL" ]; then
-        echo "========================================"
-        echo "  DEBUGGING NETWORK CONNECTIVITY"
-        echo "========================================"
-        # Check DNS resolution
-        echo "Checking DNS resolution for 'selenium'..."
-        getent hosts selenium || echo "DNS lookup failed for 'selenium'"
-        nslookup selenium || echo "nslookup failed"
-        
-        # Check if we can ping the service
-        echo "Checking if selenium host is reachable..."
-        ping -c 2 selenium 2>/dev/null || echo "Ping failed (may be blocked)"
-        
-        # Check what ports are listening
-        echo "Checking ports on selenium:4444..."
-        nc -zv selenium 4444 2>&1 || echo "Port 4444 not reachable"
-        
-        # Try alternative hostnames
-        echo "Trying alternative hostnames..."
-        curl -s --connect-timeout 5 "http://selenium:4444/wd/hub/status" 2>&1 || echo "selenium:4444 failed"
-        curl -s --connect-timeout 5 "http://localhost:4444/wd/hub/status" 2>&1 || echo "localhost:4444 failed"
-        
-        echo "========================================"
-        echo "  WAITING FOR SELENIUM GRID"
-        echo "========================================"
-        MAX_RETRIES=30
-        RETRY_COUNT=0
-        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if curl -s "$GRID_URL/wd/hub/status" 2>/dev/null | grep -q '"ready": true'; then
-            echo "✅ Selenium Grid is ready!"
-            curl -s "$GRID_URL/wd/hub/status" | head -c 200
-            echo ""
-            break
+        # Check if this is a cloud provider (skip local debugging)
+        if echo "$GRID_URL" | grep -qE "(lambdatest|browserstack|saucelabs)"; then
+          echo "========================================"
+          echo "  CLOUD SELENIUM GRID DETECTED"
+          echo "========================================"
+          echo "Provider: Cloud-based (always ready)"
+          echo "Skipping local connectivity checks..."
+          echo "✅ Cloud Grid is ready!"
+        else
+          # Local or selenium-service - do connectivity checks
+          echo "========================================"
+          echo "  WAITING FOR SELENIUM GRID"
+          echo "========================================"
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            # Use /status endpoint (works for most grids)
+            if curl -s "$GRID_URL/status" 2>/dev/null | grep -q '"ready": true'; then
+              echo "✅ Selenium Grid is ready!"
+              break
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Selenium Grid... ($RETRY_COUNT/$MAX_RETRIES)"
+            sleep 2
+          done
+          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            echo "❌ Selenium Grid failed to start!"
+            curl -v "$GRID_URL/status" 2>&1 || echo "Cannot reach Grid"
+            exit 1
           fi
-          RETRY_COUNT=$((RETRY_COUNT + 1))
-          echo "Waiting for Selenium Grid... ($RETRY_COUNT/$MAX_RETRIES)"
-          sleep 2
-        done
-        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-          echo "❌ Selenium Grid failed to start!"
-          echo "Final debug info:"
-          curl -v "$GRID_URL/wd/hub/status" 2>&1 || echo "Cannot reach Grid"
-          exit 1
         fi
       fi
     

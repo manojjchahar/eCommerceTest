@@ -143,8 +143,16 @@ stages:
     jobs:
       - job: RunTests
         displayName: 'Build & Run Tests'
-        pool:
-          name: 'Default'
+        # Conditional pool: Scheduled = Microsoft-hosted, Manual/CI = Self-hosted
+        ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
+          pool:
+            vmImage: 'ubuntu-latest'
+          variables:
+            executionMode: 'grid'
+            gridUrl: 'http://localhost:4444'
+        ${{ else }}:
+          pool:
+            name: 'Default'
         steps:
           # Set browser for scheduled cross-browser runs
           # Daily 3-browser rotation starting Monday: Chrome → Firefox → Edge
@@ -195,7 +203,59 @@ stages:
           # Maven dependencies are stored at: C:\Users\<user>\.m2\repository
           # Once downloaded, they're reused across all pipeline runs automatically
 
-          # Start Selenium Grid via Docker (only for docker execution mode)
+          # Start Selenium Grid via Docker for SCHEDULED runs (Linux agent)
+          - ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
+            - bash: |
+                echo "========================================"
+                echo "  STARTING SELENIUM GRID (Scheduled Run)"
+                echo "========================================"
+                echo "Browser: $(browser)"
+                
+                # Stop any existing containers
+                docker-compose down --remove-orphans 2>/dev/null || true
+                
+                # Start only the required services based on browser
+                browser=$(echo "$(browser)" | tr '[:upper:]' '[:lower:]')
+                case $browser in
+                  chrome)
+                    docker-compose up -d selenium-hub chrome
+                    echo "Started: selenium-hub + chrome node"
+                    ;;
+                  firefox)
+                    docker-compose up -d selenium-hub firefox
+                    echo "Started: selenium-hub + firefox node"
+                    ;;
+                  edge)
+                    docker-compose up -d selenium-hub edge
+                    echo "Started: selenium-hub + edge node"
+                    ;;
+                  *)
+                    docker-compose up -d selenium-hub chrome
+                    echo "Started: selenium-hub + chrome node (default)"
+                    ;;
+                esac
+                
+                # Wait for Selenium Grid to be ready
+                echo "Waiting for Selenium Grid to be ready..."
+                maxRetries=30
+                retryCount=0
+                while [ $retryCount -lt $maxRetries ]; do
+                  if curl -s "http://localhost:4444/wd/hub/status" 2>/dev/null | grep -q '"ready": true'; then
+                    echo "✅ Selenium Grid is ready!"
+                    docker-compose ps
+                    break
+                  fi
+                  retryCount=$((retryCount + 1))
+                  echo "Waiting... ($retryCount/$maxRetries)"
+                  sleep 2
+                done
+                
+                if [ $retryCount -eq $maxRetries ]; then
+                  echo "❌ Selenium Grid failed to start!"
+                  docker-compose logs
+                  exit 1
+                fi
+              displayName: '🐳 Start Selenium Grid (Scheduled - Linux)'
           - ${{ if eq(parameters.executionMode, 'docker') }}:
             - powershell: |
                 Write-Host "========================================"
@@ -265,51 +325,70 @@ stages:
             env:
               MAVEN_OPTS: '$(MAVEN_OPTS)'
 
-          # Test
-          # Best Practice: CI = strict (fail), Schedule/Manual = tolerant (warning)
-          - powershell: |
-              Write-Host "========================================"
-              Write-Host "  TEST CONFIG"
-              Write-Host "========================================"
-              Write-Host "Tags: $(cucumberTags)"
-              Write-Host "Browser: $(browser)"
-              Write-Host "Headless: $(headless)"
-              Write-Host "Threads: $(dataproviderthreadcount)"
-              Write-Host "Execution Mode: $(executionMode)"
-              Write-Host "Grid URL: [$(gridUrl)]"
-              Write-Host "========================================"
-              
-              # Build Maven command - conditionally include gridUrl only if not empty
-              $gridUrlArg = ""
-              if ("$(gridUrl)" -ne "") {
-                $gridUrlArg = "-DgridUrl=$(gridUrl)"
-                Write-Host "Using Remote Grid: $(gridUrl)"
-              } else {
-                Write-Host "Using Local ChromeDriver via WebDriverManager"
-              }
-              
-              mvn verify `
-                "-Dtest=ParallelTestRunner" `
-                "-Dcucumber.filter.tags=$(cucumberTags)" `
-                "-Dbrowser=$(browser)" `
-                "-Ddataproviderthreadcount=$(dataproviderthreadcount)" `
-                "-Dheadless=$(headless)" `
-                "-Dwait.short.timeout=$(waitShortTimeout)" `
-                "-Dwait.long.timeout=$(waitLongTimeout)" `
-                "-Dwait.polling.millis=$(waitPollingMillis)" `
-                $gridUrlArg `
-                "-Dretry.count=$(retryCount)" `
-                "-Dsurefire.rerunFailingTestsCount=$(retryCount)" `
-                "-Dallure.results.directory=$(allureResultsDir)" `
-                -B
-            displayName: '🧪 Run Tests'
-            # Conditional: Schedule/Manual = warning, CI/PR = fail
-            ${{ if or(eq(variables['Build.Reason'], 'Schedule'), eq(variables['Build.Reason'], 'Manual')) }}:
+          # Test - SCHEDULED RUNS (Linux/bash)
+          - ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
+            - bash: |
+                echo "========================================"
+                echo "  TEST CONFIG (Scheduled)"
+                echo "========================================"
+                echo "Tags: $(cucumberTags)"
+                echo "Browser: $(browser)"
+                echo "Headless: $(headless)"
+                echo "Threads: $(dataproviderthreadcount)"
+                echo "Grid URL: http://localhost:4444"
+                echo "========================================"
+                
+                mvn verify \
+                  -Dtest=ParallelTestRunner \
+                  -Dcucumber.filter.tags="$(cucumberTags)" \
+                  -Dbrowser=$(browser) \
+                  -Ddataproviderthreadcount=$(dataproviderthreadcount) \
+                  -Dheadless=$(headless) \
+                  -Dwait.short.timeout=$(waitShortTimeout) \
+                  -Dwait.long.timeout=$(waitLongTimeout) \
+                  -Dwait.polling.millis=$(waitPollingMillis) \
+                  -DgridUrl=http://localhost:4444 \
+                  -Dretry.count=$(retryCount) \
+                  -Dsurefire.rerunFailingTestsCount=$(retryCount) \
+                  -Dallure.results.directory=$(allureResultsDir) \
+                  -B
+              displayName: '🧪 Run Tests (Scheduled - Linux)'
               continueOnError: true
-            ${{ else }}:
-              continueOnError: false
-            env:
-              MAVEN_OPTS: '$(MAVEN_OPTS)'
+              env:
+                MAVEN_OPTS: '$(MAVEN_OPTS)'
+
+          # Test - MANUAL/CI RUNS (Windows/PowerShell)
+          - ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
+            - powershell: |
+                Write-Host "========================================"
+                Write-Host "  TEST CONFIG"
+                Write-Host "========================================"
+                Write-Host "Tags: $(cucumberTags)"
+                Write-Host "Browser: $(browser)"
+                Write-Host "Headless: $(headless)"
+                Write-Host "Threads: $(dataproviderthreadcount)"
+                Write-Host "Execution Mode: $(executionMode)"
+                Write-Host "Grid URL: [$(gridUrl)]"
+                Write-Host "========================================"
+                
+                # Build Maven command - conditionally include gridUrl only if not empty
+                $gridUrlArg = ""
+                if ("$(gridUrl)" -ne "") {
+                  $gridUrlArg = "-DgridUrl=$(gridUrl)"
+                  Write-Host "Using Remote Grid: $(gridUrl)"
+                } else {
+                  Write-Host "Using Local ChromeDriver via WebDriverManager"
+                }
+                
+                mvn verify "-Dtest=ParallelTestRunner" "-Dcucumber.filter.tags=$(cucumberTags)" "-Dbrowser=$(browser)" "-Ddataproviderthreadcount=$(dataproviderthreadcount)" "-Dheadless=$(headless)" "-Dwait.short.timeout=$(waitShortTimeout)" "-Dwait.long.timeout=$(waitLongTimeout)" "-Dwait.polling.millis=$(waitPollingMillis)" $gridUrlArg "-Dretry.count=$(retryCount)" "-Dsurefire.rerunFailingTestsCount=$(retryCount)" "-Dallure.results.directory=$(allureResultsDir)" -B
+              displayName: '🧪 Run Tests'
+              # Conditional: Manual = warning, CI/PR = fail
+              ${{ if eq(variables['Build.Reason'], 'Manual') }}:
+                continueOnError: true
+              ${{ else }}:
+                continueOnError: false
+              env:
+                MAVEN_OPTS: '$(MAVEN_OPTS)'
 
           # Publish JUnit Results
           - task: PublishTestResults@2

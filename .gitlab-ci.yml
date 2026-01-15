@@ -288,7 +288,7 @@ test:
         MAX_RETRIES=30
         RETRY_COUNT=0
         while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if curl -s "$GRID_URL/wd/hub/status" 2>/dev/null | grep -q '"ready":true'; then
+          if curl -s "$GRID_URL/wd/hub/status" 2>/dev/null | grep -q '"ready": true'; then
             echo "✅ Selenium Grid is ready!"
             curl -s "$GRID_URL/wd/hub/status" | head -c 200
             echo ""

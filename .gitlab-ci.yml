@@ -212,9 +212,10 @@ test:
     - when: always
       allow_failure: true
   services:
-    - name: selenium/standalone-chrome:4.27.0
+    # Dynamic Selenium service based on selected browser (chrome/firefox/edge)
+    - name: selenium/standalone-$BROWSER:4.27.0
       alias: selenium
-      # Required for Chrome stability on shared runners
+      # Required for browser stability on shared runners
       variables:
         SE_START_XVFB: "false"
         SE_NODE_MAX_SESSIONS: "2"

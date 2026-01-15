@@ -10,7 +10,7 @@
 spec:
   inputs:
     cucumberTags:
-      description: 'Cucumber Tags to Run'
+      description: 'Cucumber Tags (Quick Select)'
       type: string
       default: '@eCommFull'
       options:
@@ -20,7 +20,11 @@ spec:
         - '@smoke'
         - '@Products'
         - '@Cart'
-        - '@Auth'
+        - '@Authentication'
+    cucumberCustomTags:
+      description: 'Custom Tags (overrides dropdown if provided, e.g. @UI and @Products)'
+      type: string
+      default: ''
     browser:
       description: 'Browser for UI Tests'
       type: string
@@ -93,6 +97,7 @@ variables:
   
   # Test Configuration (from inputs - defaults defined in spec section)
   CUCUMBER_TAGS: $[[ inputs.cucumberTags ]]
+  CUCUMBER_CUSTOM_TAGS: $[[ inputs.cucumberCustomTags ]]
   BROWSER: $[[ inputs.browser ]]
   HEADLESS: $[[ inputs.headless ]]
   PARALLEL_THREADS: $[[ inputs.parallelThreads ]]
@@ -124,7 +129,7 @@ cache:
   policy: pull-push
 
 # ============================================
-# STAGES (Two-Stage like Azure)
+# STAGES 
 # ============================================
 stages:
   - test
@@ -134,11 +139,9 @@ stages:
 # STAGE 1: TEST EXECUTION
 # ============================================
 # SCHEDULED RUNS: Create in GitLab UI (Settings → CI/CD → Schedules)
-# Daily 3-Browser Rotation @ 2:00 AM IST (20:30 UTC) on 'develop' branch
 # Mon=Chrome, Tue=Firefox, Wed=Edge, Thu=Chrome, Fri=Firefox, Sat=Edge, Sun=Chrome
 
 # Job for LOCAL execution (self-hosted Windows runner)
-# Note: Job name uses hyphen (not colon) to avoid Windows path issues
 test-local:
   stage: test
   tags:
@@ -222,20 +225,29 @@ test:
         START_XVFB: "false"
   
   before_script:
+    # Override dropdown selection if custom tags provided
+    - |
+      if [ -n "$CUCUMBER_CUSTOM_TAGS" ]; then
+        export CUCUMBER_TAGS="$CUCUMBER_CUSTOM_TAGS"
+        echo "Using CUSTOM tags: $CUCUMBER_TAGS"
+      else
+        echo "Using dropdown tags: $CUCUMBER_TAGS"
+      fi
+    
     # Set GRID_URL based on execution mode
-    # - local: Self-hosted runner with Chrome (GRID_URL empty)
+    # - local: Self-hosted runner with selected browser (GRID_URL empty)
     # - selenium-service: Built-in sidecar container (shared runners)
-    # - grid: External Kubernetes/Selenium Grid
+    # - grid: External LambdaTest cloud Grid
     - |
       echo "========================================"
       echo "  EXECUTION MODE: $EXECUTION_MODE"
       echo "========================================"
       case $EXECUTION_MODE in
         "local")
-          # Requires self-hosted runner with Chrome installed
+          # Requires self-hosted runner with selected browser installed
           export GRID_URL=""
           echo "Local mode - using WebDriverManager"
-          echo "NOTE: Only works on self-hosted runners with Chrome"
+          echo "NOTE: Works on self-hosted runners with selected browser"
           ;;
         "selenium-service")
           # Built-in sidecar container (works on shared runners)
@@ -243,7 +255,7 @@ test:
           echo "Using Selenium service at $GRID_URL"
           ;;
         "grid")
-          # External K8s/Selenium Grid - GRID_URL must be set in CI/CD variables
+          # External LambdaTest cloud Grid - GRID_URL must be set in CI/CD variables
           if [ -z "$GRID_URL" ]; then
             echo "ERROR: GRID_URL variable not set!"
             echo "Set GRID_URL in CI/CD Variables (Settings → CI/CD → Variables)"
@@ -259,7 +271,7 @@ test:
       esac
       echo "Grid URL: ${GRID_URL:-'(empty - local mode)'}"
     
-    # Wait for Selenium Grid to be ready (only for selenium-service/grid modes)
+    # Wait for Selenium Grid to be ready (only for selenium-service modes)
     - |
       if [ -n "$GRID_URL" ]; then
         # Check if this is a cloud provider (skip local debugging)
@@ -422,7 +434,7 @@ pages:
     expire_in: 30 days
   
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"
   
   allow_failure: true
 
@@ -430,11 +442,8 @@ pages:
 # SCHEDULED PIPELINES
 # Configure in GitLab UI: Settings > CI/CD > Schedules
 # 
-# Nightly (Mon-Fri 2:00 AM IST / 8:30 PM UTC):
-#   Cron: 30 20 * * 0-4
-#   Variables: CUCUMBER_TAGS = @eCommFull
-#
-# Weekly (Sat 3:00 AM IST / 9:30 PM UTC):
-#   Cron: 30 21 * * 5
+# Nightly (Daily 2:00 AM IST / 8:30 PM UTC previous day):
+#   Cron: 30 20 * * *
+#   Branch: develop or main
 #   Variables: CUCUMBER_TAGS = @eCommFull
 # ============================================

@@ -59,9 +59,9 @@ spec:
       type: string
       default: 'selenium-service'
       options:
-        - 'local'              # Self-hosted runner with Chrome only
+        - 'local'              # Self-hosted runner with given browser
         - 'selenium-service'   # Built-in sidecar container (shared runners)
-        - 'grid'               # External K8s/Selenium Grid (set GRID_URL var)
+        - 'grid'               # External LambdaTest cloud Grid
 
 ---
 
@@ -71,8 +71,8 @@ spec:
 workflow:
   name: '$CI_PIPELINE_SOURCE - $CI_COMMIT_REF_NAME - $[[ inputs.cucumberTags ]]'
   rules:
-    # CI Trigger - Push to main/master
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+    # CI Trigger - Push to main/develop
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"
     # MR Trigger
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # Manual/Web Trigger
@@ -112,7 +112,7 @@ variables:
   # Grid Configuration (set dynamically in before_script based on EXECUTION_MODE)
   # local = empty (WebDriverManager on self-hosted runner)
   # selenium-service = http://selenium:4444 (built-in sidecar)
-  # grid = set GRID_URL in CI/CD Variables for external K8s grid
+  # grid = set GRID_URL in CI/CD Variables for external lambdaTest cloud grid
   GRID_URL: ""
   
   # Report Directories
@@ -149,8 +149,8 @@ test-local:
     - windows
   # Conditional rules: Push/MR = strict, Manual/Scheduled = warning
   rules:
-    # Push to main/master - STRICT (red on failure)
-    - if: $EXECUTION_MODE == "local" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master")
+    # Push to main/develop - STRICT (red on failure)
+    - if: $EXECUTION_MODE == "local" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop")
       allow_failure: false
     # MR - STRICT (red on failure)
     - if: $EXECUTION_MODE == "local" && $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -208,8 +208,8 @@ test:
     # Skip if local execution mode
     - if: $EXECUTION_MODE == "local"
       when: never
-    # Push to main/master - STRICT (red on failure)
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+    # Push to main/develop - STRICT (red on failure)
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"
       allow_failure: false
     # MR - STRICT (red on failure)
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"

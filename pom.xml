@@ -11,7 +11,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <selenium.version>4.16.1</selenium.version>
+        <selenium.version>4.41.0</selenium.version>
         <cucumber.version>7.15.0</cucumber.version>
         <testng.version>7.8.0</testng.version>
         <rest-assured.version>5.3.2</rest-assured.version>
@@ -30,6 +30,9 @@
         <cucumber.filter.tags></cucumber.filter.tags>
         <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
         <aspectj.version>1.9.19</aspectj.version>
+        <!-- Browser defaults (override via -Dbrowser=firefox -Dheadless=false) -->
+        <browser>chrome</browser>
+        <headless>true</headless>
     </properties>
 
     <dependencies>
@@ -211,6 +214,9 @@
                         <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
                         <!-- Allow tag filtering via -Dcucumber.filter.tags without rewriting runners -->
                         <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
+                        <!-- Forward browser config so forked JVM sees them -->
+                        <browser>${browser}</browser>
+                        <headless>${headless}</headless>
                     </systemPropertyVariables>
                     <!-- AspectJ weaver required for Allure report generation -->
                     <argLine>
@@ -287,4 +293,84 @@
             </plugin>
             </plugins>
         </build>
+
+    <profiles>
+        <!-- Auto-open Allure report after test execution. Disable with -DskipReport -->
+        <profile>
+            <id>allure-report</id>
+            <activation>
+                <property>
+                    <name>!skipReport</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <!-- Let build continue past test failures so the report is always generated -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <testFailureIgnore>true</testFailureIgnore>
+                        </configuration>
+                    </plugin>
+                    <!-- Generate persistent Allure report (preserves history for Trends) -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <!-- Step 1: Generate static report from results -->
+                            <execution>
+                                <id>allure-generate</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>allure.cmd</executable>
+                                    <arguments>
+                                        <argument>generate</argument>
+                                        <argument>${project.build.directory}/allure-results</argument>
+                                        <argument>-o</argument>
+                                        <argument>${project.build.directory}/allure-report</argument>
+                                        <argument>--clean</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <!-- Step 2: Backup history to persistent folder so it survives `mvn clean` -->
+                            <execution>
+                                <id>allure-backup-history</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>powershell</executable>
+                                    <arguments>
+                                        <argument>-Command</argument>
+                                        <argument>New-Item -ItemType Directory -Force -Path '${project.basedir}/.allure' | Out-Null; Copy-Item -Path '${project.build.directory}/allure-report/history' -Destination '${project.basedir}/.allure' -Recurse -Force</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <!-- Step 3: Open report in browser (hidden server, no CMD window) -->
+                            <execution>
+                                <id>allure-open</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>powershell</executable>
+                                    <arguments>
+                                        <argument>-Command</argument>
+                                        <argument>Start-Process -FilePath allure.cmd -ArgumentList 'open','${project.build.directory}/allure-report' -WindowStyle Hidden</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

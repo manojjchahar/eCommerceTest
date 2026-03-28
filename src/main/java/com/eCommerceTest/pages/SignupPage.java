@@ -3,7 +3,10 @@ package com.eCommerceTest.pages;
 import com.eCommerceTest.base.BaseTest;
 import com.eCommerceTest.models.UserRegistrationData;
 import com.eCommerceTest.utils.BrowserManager;
+import com.eCommerceTest.utils.UiNavigator;
+
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
@@ -18,7 +21,8 @@ public class SignupPage extends BaseTest {
     private final By nameInput = By.cssSelector("input[data-qa='signup-name']");
     private final By emailInput = By.cssSelector("input[data-qa='signup-email']");
     private final By signupButton = By.cssSelector("button[data-qa='signup-button']");
-    private final By accountInfoHeading = By.xpath("//h2[normalize-space(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))='ENTER ACCOUNT INFORMATION']");
+    private final By accountInfoHeading = By.xpath(
+            "//h2[normalize-space(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))='ENTER ACCOUNT INFORMATION']");
     private final By signUpForm = By.cssSelector(".login-form");
     private final By signUpSuccess = By.cssSelector("h2[data-qa='account-created'] b");
     private final By loggedInAs = By.cssSelector("a[href*='logout']");
@@ -50,7 +54,7 @@ public class SignupPage extends BaseTest {
     private final By continueButton = By.cssSelector("a[data-qa='continue-button']");
 
     private final By duplicateEmailError = By.xpath("//*[contains(normalize-space(.), 'Email Address already exist')]|"
-                                                    + "//p[contains(normalize-space(.), 'Email Address already exist')]");
+            + "//p[contains(normalize-space(.), 'Email Address already exist')]");
 
     public SignupPage(WebDriver driver) {
         this.driver = driver;
@@ -70,13 +74,14 @@ public class SignupPage extends BaseTest {
     public boolean verifySignupDetailsPage(String expectedHeading) {
         logger.debug("SignupPage.verifySignupDetailsPage start expectedHeading={} ", expectedHeading);
         try {
-            BrowserManager.waitShort().until(d -> !d.findElements(accountInfoHeading).isEmpty() || !d.findElements(signUpForm).isEmpty());
+            BrowserManager.waitShort()
+                    .until(d -> !d.findElements(accountInfoHeading).isEmpty() || !d.findElements(signUpForm).isEmpty());
             if (driver.findElements(accountInfoHeading).isEmpty()) {
                 logger.debug("SignupPage.verifySignupDetailsPage heading not found");
                 return false;
             }
             String actual = driver.findElement(accountInfoHeading).getText().trim();
-            logger.info("Actual sign up page heading is: {}",actual);
+            logger.info("Actual sign up page heading is: {}", actual);
             boolean result = actual.equalsIgnoreCase(expectedHeading.trim());
             logger.debug("SignupPage.verifySignupDetailsPage end result={}", result);
             return result;
@@ -99,7 +104,8 @@ public class SignupPage extends BaseTest {
     }
 
     public void fillForm(UserRegistrationData data) {
-        logger.debug("SignupPage.fillForm start name={} email={} title={} dob={}/{}/{}", data.getName(), data.getEmail(), data.getTitle(), data.getDayOfBirth(), data.getMonthOfBirth(), data.getYearOfBirth());
+        logger.debug("SignupPage.fillForm start name={} email={} title={} dob={}/{}/{}", data.getName(),
+                data.getEmail(), data.getTitle(), data.getDayOfBirth(), data.getMonthOfBirth(), data.getYearOfBirth());
         selectTitle(data.getTitle());
         // do not log password value
         type(passwordInput, mask("***"));
@@ -125,9 +131,12 @@ public class SignupPage extends BaseTest {
 
     private void selectTitle(String title) {
         logger.debug("SignupPage.selectTitle title={}", title);
-        if (title == null) return;
-        if (title.equalsIgnoreCase("Mr")) driver.findElement(titleMr).click();
-        else driver.findElement(titleMrs).click();
+        if (title == null)
+            return;
+        if (title.equalsIgnoreCase("Mr"))
+            driver.findElement(titleMr).click();
+        else
+            driver.findElement(titleMrs).click();
     }
 
     private void selectDob(int day, int month, int year) {
@@ -144,13 +153,16 @@ public class SignupPage extends BaseTest {
 
     private void type(By locator, String value) {
         // avoid logging the exact text for sensitive inputs; we can log locator only
-        logger.debug("SignupPage.type locator={} valueLen={}", locator, value==null?0:value.length());
-        if (value == null) return;
+        logger.debug("SignupPage.type locator={} valueLen={}", locator, value == null ? 0 : value.length());
+        if (value == null)
+            return;
         driver.findElement(locator).clear();
         driver.findElement(locator).sendKeys(value);
     }
 
-    private String mask(String s){ return s; }
+    private String mask(String s) {
+        return s;
+    }
 
     public boolean verifySignUpSuccess(String message) {
         logger.debug("SignupPage.verifySignUpSuccess start expected={}", message);
@@ -170,18 +182,32 @@ public class SignupPage extends BaseTest {
     public LoginPage clickContinue() {
         logger.debug("SignupPage.clickContinue start");
         BrowserManager.waitShort().until(ExpectedConditions.visibilityOfElementLocated(continueButton));
-        driver.findElement(continueButton).click();
-        BrowserManager.waitShort().until(d -> !d.findElements(loggedInAs).isEmpty());
+
+        // Use JS click to bypass potential ad overlaps
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", driver.findElement(continueButton));
+
+        try {
+            BrowserManager.waitShort().until(d -> !d.findElements(loggedInAs).isEmpty());
+        } catch (org.openqa.selenium.TimeoutException e) {
+            // Workaround for automationexercise Google Ad interceptions
+            if (driver.getCurrentUrl().contains("#google_vignette")) {
+                UiNavigator.openBase(driver);
+                BrowserManager.waitShort().until(d -> !d.findElements(loggedInAs).isEmpty());
+            } else {
+                throw e;
+            }
+        }
+
         logger.debug("SignupPage.clickContinue end");
         return new LoginPage(driver);
-
     }
 
     public boolean isDuplicateEmailErrorVisible() {
         logger.debug("SignupPage.isDuplicateEmailErrorVisible start");
         try {
             BrowserManager.waitShort()
-                .until(d -> !d.findElements(accountInfoHeading).isEmpty() || !d.findElements(duplicateEmailError).isEmpty());
+                    .until(d -> !d.findElements(accountInfoHeading).isEmpty()
+                            || !d.findElements(duplicateEmailError).isEmpty());
             boolean visible = !driver.findElements(duplicateEmailError).isEmpty();
             logger.debug("SignupPage.isDuplicateEmailErrorVisible end visible={}", visible);
             return visible;

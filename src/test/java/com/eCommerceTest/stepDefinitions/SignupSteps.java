@@ -58,6 +58,7 @@ public class SignupSteps extends BaseTest {
         try {
             User user = TestDataManager.getUserByName(username)
                     .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            
             signupPage.signup(user.getName(), user.getEmail());
             ScenarioContext.get().set("currentUser", user);
             boolean duplicate = signupPage.isDuplicateEmailErrorVisible();

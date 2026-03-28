@@ -2,8 +2,10 @@ package com.eCommerceTest.pages;
 
 import com.eCommerceTest.base.BaseTest;
 import com.eCommerceTest.utils.BrowserManager; // replaced WaitFactory
+import com.eCommerceTest.utils.ConfigReader;
 import com.eCommerceTest.utils.Logging;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -59,8 +61,24 @@ public class LoginPage extends BaseTest {
         log.debug("LoginPage.deleteAccount start");
         try {
             BrowserManager.waitShort().until(ExpectedConditions.elementToBeClickable(deleteAcct));
-            driver.findElement(deleteAcct).click();
-            BrowserManager.waitShort().until(ExpectedConditions.visibilityOfElementLocated(deletedAcctMessg));
+
+            // Bypass potential ad overlap
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", driver.findElement(deleteAcct));
+
+            try {
+                BrowserManager.waitShort().until(ExpectedConditions.visibilityOfElementLocated(deletedAcctMessg));
+            } catch (org.openqa.selenium.TimeoutException e) {
+                // Workaround for automationexercise Google Ad interceptions
+                if (driver.getCurrentUrl().contains("#google_vignette")) {
+                    // Navigate directly to delete_account to bypass the trap
+                    String baseUrl = ConfigReader.getUiConfig("base_url", "https://www.automationexercise.com");
+                    driver.navigate().to(baseUrl + "/delete_account");
+                    BrowserManager.waitShort().until(ExpectedConditions.visibilityOfElementLocated(deletedAcctMessg));
+                } else {
+                    throw e;
+                }
+            }
+
             String msg = driver.findElement(deletedAcctMessg).getText().trim();
             log.info("Account deleted message: {}", msg);
             log.debug("LoginPage.deleteAccount end success");

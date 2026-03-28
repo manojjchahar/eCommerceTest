@@ -1,6 +1,5 @@
 package com.eCommerceTest.utils;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -29,6 +28,8 @@ public final class BrowserManager {
 
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(BrowserManager::quit));
+        // Suppress CDP version warning from Selenium 4
+        java.util.logging.Logger.getLogger("org.openqa.selenium.devtools.CdpVersionFinder").setLevel(java.util.logging.Level.SEVERE);
     }
 
     private BrowserManager() {
@@ -96,7 +97,8 @@ public final class BrowserManager {
         return Long.parseLong(System.getProperty(Constants.PROP_WAIT_POLLING, Constants.DEFAULT_WAIT_POLLING));
     }
 
-    // Browser creation helpers
+    // Browser creation helpers — Selenium 4 built-in SeleniumManager handles driver resolution automatically
+
     private static WebDriver createChrome(boolean headless, String gridUrl) {
         ChromeOptions options = new ChromeOptions();
         if (headless)
@@ -108,7 +110,6 @@ public final class BrowserManager {
         options.setExperimentalOption("prefs", prefs);
         if (!gridUrl.isEmpty())
             return remote(gridUrl, options);
-        WebDriverManager.chromedriver().setup();
         return new ChromeDriver(options);
     }
 
@@ -120,7 +121,6 @@ public final class BrowserManager {
                 "--disable-background-networking", "--window-size=1366,768", "--remote-allow-origins=*");
         if (!gridUrl.isEmpty())
             return remote(gridUrl, options);
-        WebDriverManager.edgedriver().setup();
         return new EdgeDriver(options);
     }
 
@@ -132,7 +132,6 @@ public final class BrowserManager {
         options.addPreference("dom.animations.enabled", false);
         if (!gridUrl.isEmpty())
             return remote(gridUrl, options);
-        WebDriverManager.firefoxdriver().setup();
         return new FirefoxDriver(options);
     }
 

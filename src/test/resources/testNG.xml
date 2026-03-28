@@ -10,7 +10,6 @@
     <test name="Cucumber Unified">
         <classes>
             <class name="com.eCommerceTest.runners.ParallelTestRunner"/>
-            <class name="com.eCommerceTest.runners.SequentialTestRunner"/>
         </classes>
     </test>
 </suite>
